@@ -1,0 +1,3234 @@
+/* Nexa — light, monochrome "data in motion" theme. Three panes: sidebar · board · conversation. */
+.nexa {
+  --bg: #f2f2f0;
+  --panel: #ffffff;
+  --ink: #0b0b0d;
+  --ink-2: #45464b;
+  --ink-3: #8a8b90;
+  --line: #e4e4e1;
+  --line-2: #ededea;
+  --grid: #e9e9e6;
+  --accent: #0b0b0d;
+  --radius: 20px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  position: fixed; inset: 0; display: grid;
+  grid-template-columns: 252px minmax(0, 1fr) 392px;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+.nexa * { box-sizing: border-box; }
+
+/* ---- Sidebar ---- */
+.nx-side { display: flex; flex-direction: column; padding: 26px 22px; gap: 26px; }
+.nx-brand { display: flex; align-items: center; gap: 12px; }
+.nx-burst { width: 40px; height: 40px; flex: none; }
+.nx-brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.nx-brand-sub { font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+.nx-nav { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.nx-nav-item { display: flex; align-items: center; gap: 13px; padding: 12px 14px; border-radius: 14px; border: 0; background: transparent;
+  color: var(--ink-2); font-size: 14.5px; cursor: pointer; text-align: left; width: 100%; transition: background .18s, color .18s; position: relative; }
+.nx-nav-item svg { width: 18px; height: 18px; flex: none; }
+.nx-nav-item:hover { background: #eaeae7; color: var(--ink); }
+.nx-nav-item.on { background: #e7e7e3; color: var(--ink); font-weight: 600; }
+.nx-nav-item.on::before { content: ""; position: absolute; left: -22px; top: 50%; width: 6px; height: 6px; background: var(--ink); transform: translateY(-50%); }
+.nx-nav-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--ink); color: #fff;
+  font-size: 10px; font-family: var(--mono); display: inline-flex; align-items: center; justify-content: center; }
+.nx-side-foot { margin-top: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.nx-foot-icon { width: 38px; height: 38px; border-radius: 12px; background: #f0f0ed; display: grid; place-items: center; margin-bottom: 14px; }
+.nx-foot-title { font-size: 14px; font-weight: 650; line-height: 1.3; }
+.nx-foot-sub { font-size: 12px; color: var(--ink-3); margin-top: 8px; line-height: 1.45; }
+
+/* ---- Center board / stage ---- */
+.nx-stage { position: relative; margin: 16px 8px; border-radius: 26px; background: var(--panel);
+  border: 1px solid var(--line); overflow: hidden;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 11.11% 11.11%, 11.11% 11.11%; }
+.nx-stage-label { position: absolute; top: 18px; left: 20px; z-index: 4; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.nx-stage-label b { width: 7px; height: 7px; background: var(--ink); display: inline-block; }
+
+/* globe canvas fills the stage; fades/scales out on morph */
+.nx-globe { position: absolute; inset: 0; transition: opacity .7s ease, transform .9s cubic-bezier(.2,.7,.2,1); }
+.nx-globe.morph { opacity: 0; transform: scale(1.12); pointer-events: none; }
+
+/* the widget board (flowchart) */
+.nx-board { position: absolute; inset: 0; opacity: 0; transition: opacity .7s ease .15s; }
+.nx-board.on { opacity: 1; }
+.nx-board-scroll { position: absolute; inset: 0; overflow: auto; }
+.nx-board-canvas { position: relative; min-width: 100%; min-height: 100%; }
+.nx-connectors { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.nx-connectors path { fill: none; stroke: #c9c9c4; stroke-width: 1.5; stroke-dasharray: 3 5; }
+
+/* ---- Widget ---- */
+.nx-widget { position: absolute; z-index: 2; width: 248px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 16px; box-shadow: 0 14px 34px rgb(15 15 20 / 7%); transition: box-shadow .2s; user-select: none; }
+.nx-widget.dragging { box-shadow: 0 22px 50px rgb(15 15 20 / 16%); cursor: grabbing; z-index: 20; }
+.nx-widget.expanded { width: 320px; z-index: 15; }
+.nx-w-head { display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: grab; border-bottom: 1px solid var(--line-2); }
+.nx-w-ico { width: 30px; height: 30px; border-radius: 9px; background: var(--ink); color: #fff; display: grid; place-items: center; flex: none; }
+.nx-w-ico svg { width: 16px; height: 16px; }
+.nx-w-title { font-size: 13px; font-weight: 650; letter-spacing: -0.01em; }
+.nx-w-kind { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-top: 1px; }
+.nx-w-dot { margin-left: auto; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.nx-w-dot.running { background: var(--ink); animation: nx-pulse 1s ease-in-out infinite; }
+.nx-w-dot.done { background: #1f9d55; }
+.nx-w-dot.error { background: #d23f3f; }
+@keyframes nx-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+.nx-w-body { padding: 13px 14px; font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+.nx-w-rationale { color: var(--ink-3); font-size: 11.5px; }
+.nx-w-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.nx-w-metric .l { font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.nx-w-metric .v { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
+.nx-w-foot { padding: 9px 14px; border-top: 1px solid var(--line-2); font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-3); display: flex; justify-content: space-between; cursor: pointer; }
+.nx-w-foot:hover { color: var(--ink); }
+.nx-spark { display: block; width: 100%; height: 40px; margin-top: 10px; }
+.nx-spark path { fill: none; stroke: var(--ink); stroke-width: 1.6; }
+.nx-bars { display: flex; align-items: flex-end; gap: 4px; height: 40px; margin-top: 10px; }
+.nx-bars i { flex: 1; background: var(--ink); border-radius: 2px 2px 0 0; min-height: 3px; opacity: .85; }
+.nx-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 11px; font-weight: 600; }
+.nx-chip.ghost { background: #f0f0ed; color: var(--ink); border: 1px solid var(--line); }
+.nx-news-li { display: block; padding: 6px 0; border-top: 1px solid var(--line-2); font-size: 11.5px; color: var(--ink-2); }
+.nx-news-li:first-child { border-top: 0; }
+.nx-news-li a { color: var(--ink); }
+
+/* ---- Right conversation rail ---- */
+.nx-rail { display: flex; flex-direction: column; padding: 26px 26px 22px; min-height: 0; }
+.nx-pill { align-self: flex-start; display: inline-flex; align-items: center; gap: 9px; padding: 8px 15px; border-radius: 999px;
+  border: 1px solid var(--ink); font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+.nx-pill b { width: 9px; height: 9px; background: var(--ink); }
+.nx-hero { margin-top: 26px; }
+.nx-hero h1 { font-size: 56px; line-height: 0.96; font-weight: 800; letter-spacing: -0.04em; margin: 0; }
+.nx-hero p { color: var(--ink-3); font-size: 15px; line-height: 1.55; margin-top: 22px; max-width: 34ch; }
+.nx-hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: auto; padding-top: 22px; }
+.nx-hs .v { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+.nx-hs .l { font-size: 12px; color: var(--ink-3); margin-top: 4px; line-height: 1.3; }
+
+.nx-convo { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; margin-bottom: 14px; }
+.nx-msg { font-size: 13.5px; line-height: 1.6; }
+.nx-msg-role { font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 5px; }
+.nx-msg.user .nx-msg-body { background: var(--ink); color: #fff; padding: 11px 14px; border-radius: 14px 14px 4px 14px; display: inline-block; }
+.nx-msg.assistant .nx-msg-body { color: var(--ink-2); white-space: pre-wrap; }
+.nx-msg .cp-link, .nx-msg a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; word-break: break-word; }
+.nx-status { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.nx-status .spin { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); animation: nx-pulse 1s infinite; }
+
+/* composer */
+.nx-composer { margin-top: auto; }
+.nx-composer-row { display: flex; gap: 10px; align-items: flex-end; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 18px; padding: 8px 8px 8px 16px; box-shadow: 0 10px 26px rgb(15 15 20 / 6%); }
+.nx-composer textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent; font: inherit; font-size: 14px;
+  color: var(--ink); max-height: 120px; line-height: 1.45; padding: 6px 0; }
+.nx-send { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--ink); color: #fff; cursor: pointer; flex: none;
+  display: grid; place-items: center; transition: transform .15s, opacity .15s; }
+.nx-send:hover { transform: translateX(2px); } .nx-send:disabled { opacity: .4; cursor: default; transform: none; }
+.nx-execute { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 18px; border: 0; border-radius: 22px;
+  background: var(--ink); color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; flex: none;
+  transition: transform .15s, opacity .15s, box-shadow .15s; }
+.nx-execute:hover:not(:disabled) { transform: translateY(-1px); }
+.nx-execute:disabled { opacity: .4; cursor: default; transform: none; }
+.nx-suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.nx-suggest button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 7px 13px; font-size: 12px;
+  color: var(--ink-2); cursor: pointer; transition: border-color .15s, color .15s; }
+.nx-suggest button:hover { border-color: var(--ink); color: var(--ink); }
+
+/* editable basket widget */
+.nx-w-basket { width: 380px; }
+.nx-basket { width: 100%; border-collapse: collapse; font-size: 12px; }
+.nx-basket td { padding: 7px 3px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+.nx-basket tr:last-child td { border-bottom: 0; }
+.nx-basket-sym { display: flex; align-items: center; gap: 8px; }
+.nx-sym { width: 24px; height: 24px; border-radius: 7px; color: #fff; font-size: 8px; font-weight: 700; display: grid; place-items: center; flex: none; }
+.nx-basket-tk { font-weight: 600; }
+.nx-basket-bot select { font: inherit; font-size: 11px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; background: #f6f6f3; color: var(--ink); max-width: 104px; cursor: pointer; }
+.nx-basket-bot select:focus { outline: none; border-color: var(--ink); }
+.nx-basket-bot { min-width: 0; }
+.nx-basket-botchip { display: block; font-family: var(--mono); font-size: 10px; color: var(--ink-2); }
+.nx-basket-metric { display: block; max-width: 150px; margin-top: 3px; color: var(--ink-3); font: 9px/1.25 var(--mono); overflow-wrap: anywhere; }
+.nx-basket-px { text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.nx-basket-lock { text-align: right; }
+.nx-basket-lock button { border: 0; background: transparent; cursor: pointer; font-size: 13px; opacity: .55; padding: 2px; }
+.nx-basket-lock button.on, .nx-basket-lock button:hover { opacity: 1; }
+.nx-basket-al { text-align: right; white-space: nowrap; }
+.nx-basket-al input { width: 48px; text-align: right; border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; font: inherit; font-size: 12.5px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; color: var(--ink); }
+.nx-basket-al input:focus { outline: none; border-color: var(--ink); background: #f6f6f3; }
+.nx-basket-al input::-webkit-outer-spin-button, .nx-basket-al input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.nx-basket-al span { color: var(--ink-3); margin-left: 4px; }
+
+/* Nexa Analyze FAB — grey when clean, green + pulsing when the setup has unsaved edits */
+.nx-fab { position: absolute; right: 22px; bottom: 22px; z-index: 30; display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 22px; border-radius: 999px; border: 0; background: var(--ink); color: #fff; font-size: 14px; font-weight: 650;
+  cursor: pointer; box-shadow: 0 14px 34px rgb(15 15 20 / 22%); transition: transform .15s, background .25s, box-shadow .25s; }
+.nx-fab:disabled { opacity: .42; cursor: default; }
+.nx-fab:not(:disabled):hover { transform: translateY(-2px); }
+.nx-fab.on { background: #16a34a; animation: nx-fab-pulse 1.8s ease-in-out infinite; }
+.nx-fab-dot { width: 9px; height: 9px; border-radius: 50%; background: rgb(255 255 255 / 55%); }
+.nx-fab.on .nx-fab-dot { background: #fff; }
+@keyframes nx-fab-pulse { 0%,100% { box-shadow: 0 16px 40px rgb(22 163 74 / 36%); } 50% { box-shadow: 0 16px 48px rgb(22 163 74 / 64%); } }
+
+/* interactive equity chart */
+.nx-eq-svg { width: 100%; height: 120px; display: block; cursor: crosshair; }
+.nx-eq-line { fill: none; stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.nx-eq-fill { fill: rgb(11 11 13 / 6%); stroke: none; }
+.nx-eq-cursor { stroke: var(--ink-3); stroke-width: .5; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.nx-eq-pt { fill: var(--ink); }
+.nx-eq-tip { margin-top: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.nx-eq-tip.muted { color: var(--ink-3); }
+
+/* saved setups panel */
+.nx-saved { position: absolute; inset: 0; overflow: auto; padding: 26px; z-index: 6; background: var(--panel); }
+.nx-saved h2 { font-size: 22px; font-weight: 750; letter-spacing: -0.02em; margin: 0 0 4px; }
+.nx-saved-sub { color: var(--ink-3); font-size: 13px; margin-bottom: 22px; }
+.nx-saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.nx-saved-card { border: 1px solid var(--line); border-radius: 16px; padding: 18px; background: var(--panel); }
+.nx-saved-card h3 { font-size: 15px; font-weight: 650; margin: 0; }
+.nx-saved-meta { font-size: 12px; color: var(--ink-3); margin-top: 6px; line-height: 1.5; }
+.nx-saved-legs { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0; }
+.nx-saved-legs span { font-size: 10.5px; font-family: var(--mono); background: #f0f0ed; border-radius: 6px; padding: 3px 7px; }
+.nx-saved-actions { display: flex; gap: 8px; margin-top: 12px; }
+.nx-saved-actions button { border-radius: 10px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.nx-saved-actions .go { background: var(--ink); color: #fff; border-color: var(--ink); }
+.nx-saved-actions .go:hover { background: #16a34a; border-color: #16a34a; }
+.nx-saved-empty { color: var(--ink-3); font-size: 14px; padding: 40px 0; }
+
+/* save button (sits left of the FAB) */
+.nx-save { position: absolute; right: 178px; bottom: 22px; z-index: 30; display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 13.5px; font-weight: 600;
+  cursor: pointer; box-shadow: 0 10px 26px rgb(15 15 20 / 8%); transition: border-color .15s, transform .15s; }
+.nx-save:hover:not(:disabled) { border-color: var(--ink); transform: translateY(-2px); }
+.nx-save:disabled { opacity: .4; cursor: default; }
+
+/* widget detail MODAL */
+.nx-modal-back { position: fixed; inset: 0; z-index: 100; background: rgb(15 15 20 / 34%); backdrop-filter: blur(3px);
+  display: grid; place-items: center; animation: nx-fade .18s ease; }
+@keyframes nx-fade { from { opacity: 0; } to { opacity: 1; } }
+.nx-modal { width: min(620px, 92vw); max-height: 86vh; overflow: hidden; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 40px 100px rgb(15 15 20 / 26%);
+  animation: nx-modal-in .22s cubic-bezier(.2,.7,.2,1); }
+@keyframes nx-modal-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.nx-modal-head { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line-2); }
+.nx-modal-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.nx-modal-x { margin-left: auto; width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel);
+  cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.nx-modal-x:hover { border-color: var(--ink); color: var(--ink); }
+.nx-modal-body { padding: 18px 20px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+.nx-md-reco { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 0; }
+.nx-md-h { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 9px; }
+.nx-md-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 14px; }
+.nx-md-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.nx-md-table th { text-align: left; font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.nx-md-table td { padding: 8px; border-bottom: 1px solid var(--line-2); color: var(--ink); }
+.nx-md-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
+.nx-md-kv > div { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid var(--line-2); }
+.nx-md-kv span { color: var(--ink-3); } .nx-md-kv b { color: var(--ink); font-weight: 600; }
+.nx-md-news { font-size: 13px; line-height: 1.45; padding: 8px 0; border-bottom: 1px solid var(--line-2); }
+.nx-md-news a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.nx-md-news-src { color: var(--ink-3); font-size: 11.5px; }
+.nx-md-warn { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+
+/* Detailed backtest report modal (Quants Lab) */
+.nx-modal.nx-report { width: min(960px, 96vw); }
+.nx-report-sub { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
+.nx-report-pill { align-self: flex-start; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid currentcolor; border-radius: 999px; padding: 3px 10px; }
+.nx-report-tabs { margin: 0 !important; flex-wrap: wrap; }
+.nx-report-chart { border: 1px solid var(--line); border-radius: var(--radius); background: rgba(0, 0, 0, .32); padding: 12px 12px 4px; }
+.nx-report-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.nx-report-kpi { display: flex; flex-direction: column; gap: 5px; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255, 255, 255, .02); padding: 10px 12px; }
+.nx-report-kpi span { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.nx-report-kpi b { font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif); font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
+.nx-report-exec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.nx-report-exec { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255, 255, 255, .02); padding: 12px; }
+.nx-report-kv { grid-template-columns: 1fr; }
+.nx-report-kv b { overflow-wrap: anywhere; text-align: right; }
+.nx-report-empty { color: var(--ink-3); font-family: var(--mono); font-size: 12px; text-align: center; padding: 24px; }
+
+/* Tokenized-equity sleeve card grid (neat replacement for the run-on rationale blob) */
+.nx-stk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.nx-stk-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 13px; background: var(--panel, rgba(255,255,255,.02)); }
+.nx-stk-top { display: flex; align-items: center; gap: 10px; }
+.nx-stk-logo { display: inline-flex; flex: none; }
+.nx-stk-id { display: flex; flex-direction: column; min-width: 0; }
+.nx-stk-tok { font-weight: 700; font-size: 14px; color: var(--ink); letter-spacing: .01em; }
+.nx-stk-name { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-top: 1px; }
+.nx-stk-px { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; }
+.nx-stk-price { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; color: var(--ink); }
+.nx-stk-day { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.nx-stk-day.up, .nx-stk-metrics b.up { color: var(--cyan, #1f9d55); }
+.nx-stk-day.down, .nx-stk-metrics b.down { color: var(--accent, #ff5a1f); }
+.nx-stk-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.nx-stk-metrics > div { display: flex; flex-direction: column; gap: 2px; }
+.nx-stk-metrics span { font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.nx-stk-metrics b { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nx-stk-note { margin: 12px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--ink-3); }
+.nx-stk-src { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.nx-stk-srcdot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.nx-stk-srcdot.on { background: var(--cyan, #46e0ff); box-shadow: 0 0 6px rgba(70, 224, 255, 0.6); }
+.nx-stk-srcdot.off { background: var(--gold, #ffce3a); }
+
+/* ============================ Portfolio page (nx-pf-*) ============================ */
+.nx-pf { padding: clamp(14px, 2vw, 28px); overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 16px; }
+.nx-pf-loading { color: var(--ink-3); font-family: var(--mono); padding: 40px; }
+.nx-pf .up { color: var(--cyan); }
+.nx-pf .down { color: var(--accent); }
+.nx-pf-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; }
+.nx-pf-kpi { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: rgba(255,255,255,.02); display: flex; flex-direction: column; gap: 6px; }
+.nx-pf-kpi span { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.nx-pf-kpi b { font-family: var(--font-display, "Chakra Petch", sans-serif); font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.05; }
+.nx-pf-kpi b em { font-style: normal; font-size: 13px; color: var(--ink-3); font-weight: 400; }
+.nx-pf-kpi-spark { justify-content: space-between; }
+.nx-pf-spark { width: 100%; height: 30px; }
+.nx-pf-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: rgba(255,255,255,.015); }
+.nx-pf-table td, .nx-pf-table th { white-space: nowrap; }
+.nx-pf-side { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.nx-pf-side.long { color: var(--cyan); border-color: rgba(70,224,255,.4); }
+.nx-pf-side.short { color: var(--accent); border-color: rgba(255,90,31,.4); }
+.nx-pf-by { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.nx-pf-by.ai { color: var(--cyan); border-color: rgba(70,224,255,.42); background: rgba(70,224,255,.07); }
+.nx-pf-by.user { color: var(--ink); border-color: var(--line); }
+.nx-pf-empty { color: var(--ink-3); font-size: 13px; padding: 10px 2px; }
+.nx-pf-empty-all { text-align: center; padding: 34px; border: 1px dashed var(--line); border-radius: 14px; color: var(--ink-3); }
+.nx-pf-empty-all h3 { color: var(--ink); font-family: var(--font-display, "Chakra Petch", sans-serif); margin: 0 0 6px; }
+.nx-pf-empty-all p { margin: 0 auto; max-width: 48ch; line-height: 1.55; }
+.nx-pf-lp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.nx-pf-lp-card { border: 1px solid var(--line); border-radius: 12px; padding: 13px; background: rgba(255,255,255,.02); }
+.nx-pf-lp-top { display: flex; align-items: center; gap: 8px; }
+.nx-pf-lp-top b { font-size: 14px; color: var(--ink); }
+.nx-pf-lp-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.nx-pf-lp-metrics > div { display: flex; flex-direction: column; gap: 2px; }
+.nx-pf-lp-metrics span { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.nx-pf-lp-metrics b { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nx-pf-feed { display: flex; flex-direction: column; }
+.nx-pf-feed-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line-2); font-size: 12.5px; color: var(--ink-2); }
+.nx-pf-feed-row:first-child { border-top: 0; }
+.nx-pf-feed-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ink-3); }
+.nx-pf-feed-dot.up { background: var(--cyan); }
+.nx-pf-feed-dot.down { background: var(--accent); }
+.nx-pf-feed-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-pf-feed-time { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+
+/* ====================== WalletConnect-style account modal (nx-wc-*) ====================== */
+.nx-wc-modal { width: min(400px, 94vw); max-height: min(660px, 88vh); overflow-y: auto;
+  background: linear-gradient(180deg, rgba(255,90,31,.08), rgba(0,0,0,.12) 22%), #0d0d0f;
+  border: 1px solid rgba(255,90,31,.28); border-radius: 16px; box-shadow: 0 42px 120px rgba(0,0,0,.82);
+  padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.nx-wc-head { display: flex; align-items: center; gap: 12px; }
+.nx-wc-ident { width: 40px; height: 40px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+.nx-wc-ident.lg { width: 64px; height: 64px; }
+.nx-wc-id { display: flex; flex-direction: column; min-width: 0; }
+.nx-wc-id b { font-family: var(--mono); font-size: 15px; color: var(--ink); }
+.nx-wc-id em { font-style: normal; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-top: 2px; }
+.nx-wc-head-actions { margin-left: auto; display: flex; gap: 6px; }
+.nx-wc-iconbtn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.03);
+  color: var(--ink-2); display: grid; place-items: center; cursor: pointer; font-size: 13px; text-decoration: none; transition: border-color .15s, color .15s; }
+.nx-wc-iconbtn:hover { border-color: var(--accent); color: var(--ink); }
+.nx-wc-iconbtn:disabled { opacity: .4; cursor: default; }
+.nx-wc-nets { display: flex; gap: 8px; }
+.nx-wc-nets button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 10px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.025); color: var(--ink-3);
+  font: 700 10.5px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.nx-wc-nets button.on { border-color: rgba(255,90,31,.5); background: rgba(255,90,31,.1); color: var(--ink); }
+.nx-wc-netdot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); }
+.nx-wc-balance { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: rgba(255,255,255,.02); }
+.nx-wc-balance-l { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); display: block; }
+.nx-wc-balance-v { font-family: var(--font-display, "Chakra Petch", sans-serif); font-size: 30px; font-weight: 800; color: var(--ink); display: block; margin-top: 2px; }
+.nx-wc-tokens { margin-top: 12px; border-top: 1px solid var(--line-2); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.nx-wc-token { display: flex; justify-content: space-between; font-size: 13px; }
+.nx-wc-token span { color: var(--ink-2); }
+.nx-wc-token b { font-family: var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.nx-wc-section-h { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 8px; }
+.nx-wc-agent, .nx-wc-credit { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,.02); }
+.nx-wc-row { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nx-wc-row span { font-family: var(--mono); color: var(--ink-2); font-size: 12.5px; }
+.nx-wc-row b { margin-left: auto; font-family: var(--mono); color: var(--ink); font-size: 12.5px; }
+.nx-wc-row em { font-style: normal; color: var(--cyan); }
+.nx-wc-credit-head { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-3); margin-bottom: 8px; }
+.nx-wc-credit-head b { color: var(--ink); }
+.nx-wc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.nx-wc-refresh { padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink-2);
+  font: 700 10.5px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: border-color .15s, color .15s; }
+.nx-wc-refresh:hover { border-color: var(--accent); color: var(--ink); }
+.nx-wc-muted { font-size: 11px; color: var(--ink-3); }
+.nx-wc-empty { font-size: 12px; color: var(--ink-3); }
+.nx-wc-connect { text-align: center; padding: 14px 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.nx-wc-connect h2 { font-family: var(--font-display, "Chakra Petch", sans-serif); font-size: 18px; color: var(--ink); margin: 4px 0 0; }
+.nx-wc-connect p { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; max-width: 32ch; margin: 0; }
+.nx-wc-close-text { background: none; border: 0; color: var(--ink-3); font-size: 12px; cursor: pointer; margin-top: 4px; }
+
+/* ===================== Execute bar (above composer) + launch stepper ===================== */
+.nx-execute-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+  padding: 10px 14px; border: 1px solid rgba(255,90,31,.3); border-radius: 14px; background: linear-gradient(90deg, rgba(255,90,31,.12), rgba(255,90,31,.02)); }
+.nx-execute-bar-copy { display: flex; flex-direction: column; min-width: 0; }
+.nx-execute-bar-copy b { font-size: 12.5px; color: var(--ink); font-family: var(--font-display, "Chakra Petch", sans-serif); text-transform: uppercase; letter-spacing: .05em; }
+.nx-execute-bar-copy em { font-style: normal; font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+
+.nx-xlaunch { width: min(560px, 95vw); max-height: 90vh; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(255,90,31,.08), rgba(0,0,0,.12) 18%), #0d0d0f;
+  border: 1px solid rgba(255,90,31,.28); border-radius: 18px; box-shadow: 0 42px 120px rgba(0,0,0,.82);
+  padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.nx-xlaunch-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.nx-xlaunch-head h2 { font-family: var(--font-display, "Chakra Petch", sans-serif); font-size: 20px; color: var(--ink); margin: 8px 0 4px; }
+.nx-xlaunch-head p { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin: 0; max-width: 48ch; }
+.nx-xlaunch-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.nx-xlaunch-summary > div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: rgba(255,255,255,.02); display: flex; flex-direction: column; gap: 4px; }
+.nx-xlaunch-summary span { font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.nx-xlaunch-summary b { font-family: var(--font-display, "Chakra Petch", sans-serif); font-size: 17px; color: var(--ink); }
+.nx-xlaunch-summary b.ok { color: var(--cyan); }
+.nx-xlaunch-summary b.warn { color: var(--gold); }
+
+.nx-xstep-list { display: flex; flex-direction: column; }
+.nx-xstep { position: relative; display: flex; align-items: flex-start; gap: 13px; padding: 11px 0; }
+.nx-xstep::before { content: ""; position: absolute; left: 13px; top: 35px; bottom: -11px; width: 2px; background: var(--line-2); }
+.nx-xstep:last-child::before { display: none; }
+.nx-xstep.done::before { background: rgba(70,224,255,.35); }
+.nx-xstep-marker { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--line); background: #141414; color: var(--ink-3); font-size: 13px; z-index: 1; }
+.nx-xstep.running .nx-xstep-marker { border-color: var(--accent); color: var(--accent); }
+.nx-xstep.done .nx-xstep-marker { border-color: var(--cyan); color: var(--cyan); background: rgba(70,224,255,.1); }
+.nx-xstep.failed .nx-xstep-marker { border-color: var(--accent); color: var(--accent); background: rgba(255,90,31,.12); }
+.nx-xstep-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,90,31,.3); border-top-color: var(--accent); animation: nx-spin .7s linear infinite; }
+@keyframes nx-spin { to { transform: rotate(360deg); } }
+.nx-xstep-body { flex: 1; min-width: 0; }
+.nx-xstep-title { display: flex; align-items: baseline; gap: 8px; }
+.nx-xstep-title b { font-size: 13.5px; color: var(--ink); }
+.nx-xstep-amt { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.nx-xstep-sub { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; margin-top: 2px; }
+.nx-xstep-err { font-size: 11.5px; color: var(--accent); margin-top: 4px; }
+.nx-xstep-link { display: inline-block; margin-top: 5px; font-family: var(--mono); font-size: 11px; color: var(--cyan); text-decoration: none; }
+.nx-xstep-link:hover { text-decoration: underline; }
+.nx-xstep-idx { font-family: var(--mono); font-size: 10px; color: var(--ink-3); align-self: center; }
+.nx-xstep-empty { color: var(--ink-3); font-size: 12.5px; padding: 14px 0; line-height: 1.5; }
+
+.nx-xbal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; border-top: 1px solid var(--line-2); padding-top: 12px; }
+.nx-xbal-col { display: flex; flex-direction: column; gap: 2px; }
+.nx-xbal-col span { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.nx-xbal-col b { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.nx-xbal-col em { font-style: normal; font-size: 10.5px; color: var(--ink-3); }
+.nx-xstatus { font-size: 12px; color: var(--ink-2); margin: 0; font-family: var(--mono); }
+.nx-mb-moves-table-wrap {
+  margin-top: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.nx-mb-moves-table {
+  margin: 0;
+}
+
+.nx-mb-moves-table th {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.nx-mb-moves-table td {
+  padding: 9px 10px;
+}
+
+.nx-mb-move-row.up td:last-child b {
+  color: var(--cyan);
+}
+
+.nx-mb-move-row.down td:last-child b {
+  color: var(--accent);
+}
+
+.nx-mb-side {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 2px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nx-mb-side.mover {
+  color: var(--cyan);
+  border-color: rgba(70, 224, 255, 0.28);
+  background: rgba(70, 224, 255, 0.08);
+}
+
+.nx-mb-side.laggard {
+  color: var(--accent);
+  border-color: rgba(255, 90, 31, 0.3);
+  background: rgba(255, 90, 31, 0.08);
+}
+
+.nx-mb-card-head,
+.nx-mb-stat-grid span,
+.nx-mb-guidance b,
+.nx-mb-stock-top,
+.nx-mb-stock-footer,
+.nx-mb-source span,
+.nx-mb-source b,
+.nx-mb-source em {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.nx-mb-gmx-card {
+  margin-top: 12px;
+  border: 1px solid rgba(70, 224, 255, 0.22);
+  border-radius: 4px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(70, 224, 255, 0.12), transparent 42%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.nx-mb-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.nx-mb-card-head b {
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.nx-mb-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.nx-mb-stat-grid > div {
+  padding: 10px;
+  border-right: 1px solid var(--line-2);
+}
+
+.nx-mb-stat-grid > div:last-child { border-right: 0; }
+
+.nx-mb-stat-grid span {
+  display: block;
+  font-size: 8.5px;
+  color: var(--ink-3);
+  margin-bottom: 5px;
+}
+
+.nx-mb-stat-grid b {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.nx-mb-guidance {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid rgba(255, 90, 31, 0.32);
+  border-left-width: 3px;
+  background: rgba(255, 90, 31, 0.08);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.nx-mb-guidance-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #111;
+  font-family: var(--mono);
+  font-weight: 800;
+}
+
+.nx-mb-guidance b {
+  display: block;
+  color: var(--ink);
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.nx-mb-guidance p,
+.nx-mb-stock p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.nx-mb-stock {
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 11px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.nx-mb-stock.closed {
+  border-color: rgba(255, 90, 31, 0.3);
+  background: rgba(255, 90, 31, 0.07);
+}
+
+.nx-mb-stock.open {
+  border-color: rgba(70, 224, 255, 0.28);
+  background: rgba(70, 224, 255, 0.07);
+}
+
+.nx-mb-stock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.nx-mb-stock-top b {
+  color: var(--accent);
+}
+
+.nx-mb-stock.open .nx-mb-stock-top b {
+  color: var(--cyan);
+}
+
+.nx-mb-stock-footer {
+  margin-top: 9px;
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.nx-mb-sources {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.nx-mb-source {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.nx-mb-source span {
+  color: var(--ink);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nx-mb-source b {
+  color: var(--cyan);
+  font-size: 9px;
+}
+
+.nx-mb-source.stale b {
+  color: var(--accent);
+}
+
+.nx-mb-source em {
+  grid-column: 1 / -1;
+  color: var(--ink-3);
+  font-size: 8.5px;
+  font-style: normal;
+}
+
+/* factor heatmap (multi-factor screen) */
+.nx-heat-table td { padding: 6px; }
+.nx-heat-table th { padding: 5px 6px; }
+.nx-heat { text-align: center; font-variant-numeric: tabular-nums; font-size: 11.5px; border-radius: 3px; }
+/* compact pick rows in the widget body (factors / screen) */
+.nx-pick-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 6px 0; border-top: 1px solid var(--line-2); font-size: 11.5px; }
+.nx-pick-row:first-child { border-top: 0; }
+.nx-pick-rank { font-family: var(--mono); font-size: 9px; color: var(--ink-3); width: 12px; }
+.nx-pick-sym { font-weight: 600; color: var(--ink); min-width: 64px; }
+.nx-pick-bar { flex: 1; height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.nx-pick-bar i { display: block; height: 100%; background: var(--ink); border-radius: 999px; }
+.nx-pick-score { font-family: var(--mono); font-size: 10px; color: var(--ink-2); white-space: nowrap; width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+
+/* option chips (ask_user) */
+.nx-ask { margin-bottom: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; box-shadow: 0 10px 26px rgb(15 15 20 / 6%); }
+.nx-ask-q { font-size: 13.5px; font-weight: 600; margin-bottom: 11px; }
+.nx-ask-opts { display: flex; flex-direction: column; gap: 8px; }
+.nx-ask-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; border: 1px solid var(--line);
+  background: var(--panel); border-radius: 13px; padding: 11px 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+.nx-ask-opt:hover { border-color: var(--ink); }
+.nx-ask-opt.on { border-color: var(--ink); background: #f6f6f3; }
+.nx-ask-opt-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.nx-ask-opt-c { font-size: 11.5px; color: var(--ink-3); line-height: 1.4; }
+.nx-ask-confirm { align-self: flex-start; margin-top: 2px; }
+.nx-ask-confirm { border: 0; background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.nx-ask-confirm:disabled { opacity: .4; cursor: default; }
+
+/* panel host (memory/budget/etc reused inside the stage) */
+.nx-panelhost { position: absolute; inset: 0; overflow: auto; padding: 20px; z-index: 5; background: var(--panel); }
+
+@media (max-width: 1180px) { .nexa { grid-template-columns: 80px minmax(0,1fr) 340px; } .nx-brand-name, .nx-nav-item span, .nx-side-foot, .nx-brand-sub { display: none; } }
+
+/* ============================================================================
+   Boundary / phase system — stages flow horizontally in dotted boxes.
+   When the agent starts placing widgets, the page gets `.board-active`:
+   the sidebar collapses and the rigid 3-column grid yields to the board.
+   ============================================================================ */
+.nexa.board-active { grid-template-columns: 0px minmax(0, 1fr) 340px; }
+.nexa.board-active .nx-side { width: 0; min-width: 0; padding: 0; margin: 0; overflow: hidden; opacity: 0; pointer-events: none; border: 0; }
+.nexa.rail-off,
+.nexa.rail-off.board-active {
+  grid-template-columns: 280px minmax(0, 1fr) 0;
+}
+.nexa.lab-view,
+.nexa.lab-view.board-active {
+  grid-template-columns: 280px minmax(0, 1fr) 0;
+}
+.nexa.rail-off .nx-side,
+.nexa.lab-view .nx-side,
+.nexa.rail-off.board-active .nx-side,
+.nexa.lab-view.board-active .nx-side {
+  width: auto;
+  min-width: 0;
+  padding: 26px 18px 20px;
+  margin: 0;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  border-right: 0;
+}
+.nexa.rail-off .nx-rail,
+.nexa.lab-view .nx-rail {
+  display: none;
+}
+
+/* Horizontal scroller for the phase row */
+.nx-flow-scroll { position: absolute; inset: 0; overflow: auto; cursor: grab; overscroll-behavior: contain; touch-action: none; }
+.nx-flow-scroll:active { cursor: grabbing; }
+.nx-phase-row { display: flex; align-items: flex-start; gap: 0; padding: 420px 36px 920px; min-width: max-content; min-height: max(280vh, 2400px); }
+.nx-flow-empty { color: var(--ink-3); font-size: 14px; padding: 40px; max-width: 360px; }
+
+/* A phase = a dotted, auto-sizing box that bounds its stage's widgets */
+.nx-phase {
+  border: 1.5px dashed var(--line); border-radius: 18px; padding: 14px 14px 16px;
+  background: rgba(255,255,255,0.45); display: flex; flex-direction: column; gap: 12px;
+  min-width: 276px; align-self: flex-start; width: max-content; max-width: none; overflow: visible;
+}
+.nx-phase-context  { border-color: #c9c9c4; }
+.nx-phase-discovery{ border-color: #b9c4e6; }
+.nx-phase-backtest { border-color: #b7d8c2; }
+.nx-phase-trade    { border-color: #d8c2e6; }
+.nx-phase-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 6px; }
+.nx-phase-idx { width: 20px; height: 20px; border-radius: 7px; background: var(--ink); color: #fff;
+  font-family: var(--mono); font-size: 11px; display: grid; place-items: center; flex: none; }
+.nx-phase-label { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-2); }
+.nx-phase-count { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-3);
+  background: #eeeeeb; border-radius: 8px; padding: 1px 7px; }
+/* Square fill: column-major grid, row count set inline (~√n). Cards keep a fixed width;
+   adding widgets grows the box rightward, keeping it roughly square instead of a tall strip. */
+.nx-phase-widgets { display: grid; grid-auto-flow: column; grid-auto-columns: 248px; gap: 12px 14px; align-items: start; }
+
+/* Flow cards: grid-positioned; relative + above the connector overlay. Draggable by the header. */
+.nx-widget.nx-flow { position: relative; left: auto; top: auto; width: 248px; z-index: 6; }
+.nx-widget.nx-flow.nx-moved { z-index: 7; box-shadow: 0 8px 24px rgba(0,0,0,0.13); }
+.nx-w-head.nx-drag { cursor: grab; touch-action: none; }
+.nx-w-head.nx-drag:active { cursor: grabbing; }
+
+/* Connector overlay: SVG drawn over the phase row, links consecutive widgets within a phase */
+.nx-connectors { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 1; overflow: visible; }
+
+/* Connector between phase boxes — a clean horizontal arrow */
+.nx-phase-arrow { align-self: center; font-size: 22px; color: var(--ink-3); padding: 0 6px; user-select: none; flex: none; position: relative; z-index: 2; }
+
+/* ---- Asset icon: real token / stock / LP image when available; no placeholder glyphs ---- */
+.nx-asset { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; vertical-align: middle; min-width: 0; }
+.nx-asset-real { display: inline-flex; align-items: center; flex: none; min-width: 0; }
+.nx-asset-sym { letter-spacing: -0.01em; min-width: 0; overflow-wrap: anywhere; }
+.nx-asset-sub { font-family: var(--mono); font-size: 10px; color: var(--ink-3); font-weight: 500; }
+
+/* ---- Per-asset reasoning (hold vs leverage vs LP): the striking comparison widget ---- */
+.nx-hvl { display: flex; flex-direction: column; gap: 14px; }
+.nx-hvl-asset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 11px 11px; background: #fff; }
+.nx-hvl-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-wrap: wrap; }
+.nx-hvl-pick { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  color: #fff; border-radius: 7px; padding: 2px 8px; }
+.nx-hvl-detail { font-size: 11px; color: var(--ink-3); flex: 1 1 100%; line-height: 1.35; }
+.nx-hvl-bars { display: flex; flex-direction: column; gap: 5px; margin-bottom: 9px; }
+.nx-hvl-bar { display: grid; grid-template-columns: 64px 1fr 52px; align-items: center; gap: 7px; }
+.nx-hvl-bar-lbl { font-size: 11px; color: var(--ink-2); font-weight: 600; }
+.nx-hvl-bar.win .nx-hvl-bar-lbl { color: var(--ink); font-weight: 700; }
+.nx-hvl-bar-track { height: 9px; background: #f0f0ec; border-radius: 5px; overflow: hidden; }
+.nx-hvl-bar-fill { height: 100%; border-radius: 5px; min-width: 2px; transition: width 0.4s ease; }
+.nx-hvl-bar-val { font-family: var(--mono); font-size: 11px; text-align: right; color: var(--ink-2); }
+.nx-hvl-tbl { width: 100%; }
+
+/* ============================================================================
+   DUA// landing-theme changeover
+   Same Copilot layout + same globe/flow logic, restyled to the landing page's
+   industrial / techwear protocol surface.
+   ============================================================================ */
+.nexa {
+  --bg: #121212;
+  --panel: #101010;
+  --panel-2: #171717;
+  --panel-3: #1b1b1b;
+  --ink: #ededed;
+  --ink-2: #b8b8b8;
+  --ink-3: #777777;
+  --line: rgba(255, 255, 255, 0.13);
+  --line-2: rgba(255, 255, 255, 0.07);
+  --grid: rgba(255, 255, 255, 0.055);
+  --accent: #ff5a1f;
+  --gold: #ffce3a;
+  --cyan: #46e0ff;
+  --danger: #ff5a1f;
+  --success: #46e0ff;
+  --radius: 4px;
+  --mono: var(--font-mono, "Share Tech Mono", ui-monospace, monospace);
+  font-family: var(--font-ui, "Archivo", system-ui, sans-serif);
+  padding: clamp(8px, 1.3vw, 18px);
+  gap: 0;
+  background:
+    radial-gradient(100% 100% at 82% -10%, rgba(255, 90, 31, 0.08), transparent 48%),
+    radial-gradient(80% 80% at 50% 35%, rgba(70, 224, 255, 0.045), transparent 58%),
+    #121212;
+  color: var(--ink);
+  border: 0;
+}
+
+.nexa::before,
+.nexa::after {
+  content: "";
+  position: fixed;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--accent);
+  opacity: 0.75;
+  z-index: 90;
+  pointer-events: none;
+}
+.nexa::before { left: 22px; top: 22px; border-right: 0; border-bottom: 0; }
+.nexa::after { right: 22px; bottom: 22px; border-left: 0; border-top: 0; }
+
+.nx-side,
+.nx-stage,
+.nx-rail {
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+}
+
+/* ---- Sidebar as protocol rail ---- */
+.nx-side {
+  padding: 26px 18px 20px;
+  border-right: 0;
+  border-radius: clamp(18px, 2vw, 30px) 0 0 clamp(18px, 2vw, 30px);
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 38px, var(--line-2) 38px, var(--line-2) 39px),
+    linear-gradient(180deg, rgba(255, 90, 31, 0.05), transparent 32%),
+    #111;
+}
+.nx-brand { color: var(--ink); }
+.nx-burst {
+  color: var(--accent);
+  filter: drop-shadow(0 0 18px rgba(255, 90, 31, 0.35));
+}
+.nx-brand-name {
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 20px;
+  color: var(--ink);
+}
+.nx-brand-name::after {
+  content: " //";
+  color: var(--accent);
+}
+.nx-brand-sub,
+.nx-nav-item,
+.nx-foot-sub,
+.nx-foot-title,
+.nx-side-foot {
+  font-family: var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nx-brand-sub {
+  color: var(--ink-3);
+  font-size: 9px;
+}
+.nx-nav { gap: 8px; }
+.nx-nav-item {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--ink-3);
+  background: transparent;
+  font-size: 11px;
+  padding: 12px;
+  text-decoration: none;
+}
+.nx-nav-item svg { color: currentColor; }
+.nx-nav-item:hover {
+  background: rgba(255, 90, 31, 0.08);
+  border-color: rgba(255, 90, 31, 0.32);
+  color: var(--accent);
+}
+.nx-nav-item.on {
+  background: rgba(255, 90, 31, 0.13);
+  border-color: rgba(255, 90, 31, 0.54);
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--accent), 0 0 24px rgba(255, 90, 31, 0.08);
+}
+.nx-nav-item.on::before {
+  left: -18px;
+  background: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 90, 31, 0.75);
+}
+.nx-nav-badge {
+  background: var(--accent);
+  color: #111;
+  border-radius: 2px;
+}
+.nx-side-foot {
+  background: #0e0e0e;
+  border-color: var(--line);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 90, 31, 0.05);
+}
+.nx-nav-back {
+  width: 100%;
+  border: 1px solid rgba(255, 90, 31, 0.32);
+  border-radius: 4px;
+  background: rgba(255, 90, 31, 0.08);
+  color: var(--accent);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.nx-nav-back:hover {
+  background: rgba(255, 90, 31, 0.14);
+  border-color: rgba(255, 90, 31, 0.55);
+}
+.nx-lab-nav {
+  margin-top: 0;
+}
+.nx-lab-link {
+  min-height: 46px;
+}
+.nx-foot-icon {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(255, 90, 31, 0.45);
+  border-radius: 50%;
+}
+.nx-foot-title {
+  color: var(--ink);
+  font-size: 11px;
+}
+.nx-foot-sub {
+  color: var(--ink-3);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Center stage: same globe/board layout, landing-style signal chamber ---- */
+.nx-stage {
+  margin: 0;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 46px 46px,
+    radial-gradient(circle at 68% 28%, rgba(255, 90, 31, 0.18), transparent 34%),
+    radial-gradient(circle at 40% 50%, rgba(70, 224, 255, 0.1), transparent 44%),
+    #0a0a0a;
+}
+.nx-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 2px, transparent 2px 4px);
+  opacity: 0.35;
+  z-index: 1;
+}
+.nx-stage::after {
+  content: "";
+  position: absolute;
+  right: clamp(18px, 2.2vw, 34px);
+  bottom: clamp(18px, 2.2vw, 34px);
+  width: clamp(180px, 23vw, 300px);
+  height: 84px;
+  background:
+    repeating-linear-gradient(90deg, #111 0 2px, transparent 2px 4px, #111 4px 5px, transparent 5px 8px, #111 8px 11px, transparent 11px 12px),
+    var(--accent);
+  opacity: 0.14;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 1;
+}
+.nx-stage-label {
+  z-index: 8;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+}
+.nx-stage-label b {
+  background: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 90, 31, 0.65);
+}
+.nx-globe {
+  z-index: 2;
+  filter: saturate(1.15) contrast(1.12) drop-shadow(0 0 30px rgba(70, 224, 255, 0.12));
+}
+.nx-board { z-index: 3; }
+.nx-board-scroll {
+  position: relative;
+}
+.nx-board-scroll.nx-flow-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+.nx-phase-row {
+  position: relative;
+  z-index: 2;
+}
+.nx-connectors {
+  z-index: 1;
+}
+.nx-connectors path {
+  stroke: rgba(255, 206, 58, 0.55);
+  stroke-width: 1.35;
+  opacity: 0.72;
+}
+.nx-flow-empty {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Widgets, phase boxes and all expanded widget details ---- */
+.nx-widget,
+.nx-ask,
+.nx-saved-card,
+.nx-modal,
+.nx-hvl-asset {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
+    #101010;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+.nx-widget {
+  color: var(--ink);
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.36), inset 0 0 0 1px rgba(255, 90, 31, 0.025);
+}
+.nx-widget.nx-flow {
+  width: 286px;
+}
+.nx-phase-widgets {
+  grid-auto-columns: 286px;
+}
+.nx-phase:has(.nx-kind-intake) .nx-phase-widgets {
+  grid-auto-columns: 560px;
+}
+.nx-kind-intake.nx-flow {
+  width: 560px;
+}
+.nx-kind-hold_vs_trade_vs_lp.nx-flow,
+.nx-kind-multiasset.nx-flow,
+.nx-kind-truth.nx-flow {
+  width: 330px;
+}
+.nx-phase:has(.nx-kind-hold_vs_trade_vs_lp) .nx-phase-widgets,
+.nx-phase:has(.nx-kind-multiasset) .nx-phase-widgets,
+.nx-phase:has(.nx-kind-truth) .nx-phase-widgets {
+  grid-auto-columns: 330px;
+}
+.nx-widget.nx-flow.nx-w-basket {
+  width: 420px;
+}
+.nx-phase:has(.nx-w-basket) .nx-phase-widgets {
+  grid-auto-columns: 420px;
+}
+.nx-widget.dragging,
+.nx-widget.nx-flow.nx-moved {
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.6), 0 0 28px rgba(255, 90, 31, 0.18);
+}
+.nx-w-head,
+.nx-modal-head {
+  border-bottom-color: var(--line-2);
+  background: rgba(255, 255, 255, 0.025);
+}
+.nx-w-ico {
+  background: var(--accent);
+  color: #111;
+  border-radius: 3px;
+  box-shadow: 0 0 22px rgba(255, 90, 31, 0.25);
+}
+.nx-w-title,
+.nx-modal-title,
+.nx-saved-card h3 {
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  color: var(--ink);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.nx-w-head > div {
+  min-width: 0;
+}
+.nx-w-body {
+  min-width: 0;
+  overflow: hidden;
+}
+.nx-w-rationale,
+.nx-news-li,
+.nx-md-reco,
+.nx-md-warn,
+.nx-md-news,
+.nx-msg-body,
+.nx-pick-score,
+.nx-hvl-detail,
+.nx-hvl-bar-lbl,
+.nx-saved-sub {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.nx-widget .nx-w-rationale {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nx-w-kind,
+.nx-w-foot,
+.nx-md-h,
+.nx-md-table th,
+.nx-w-metric .l,
+.nx-pick-rank,
+.nx-pick-score,
+.nx-basket-botchip,
+.nx-hvl-bar-val,
+.nx-eq-tip,
+.nx-saved-meta,
+.nx-saved-legs span {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.nx-w-kind,
+.nx-w-rationale,
+.nx-w-foot,
+.nx-md-h,
+.nx-md-news-src,
+.nx-md-kv span,
+.nx-saved-meta,
+.nx-saved-sub,
+.nx-saved-empty,
+.nx-asset-sub,
+.nx-hvl-detail {
+  color: var(--ink-3);
+}
+.nx-w-body,
+.nx-md-reco,
+.nx-md-warn,
+.nx-md-news,
+.nx-msg.assistant .nx-msg-body {
+  color: var(--ink-2);
+}
+.nx-w-metric .v {
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  color: var(--ink);
+}
+.nx-w-dot.running {
+  background: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 90, 31, 0.7);
+}
+.nx-w-dot.done {
+  background: var(--cyan);
+  box-shadow: 0 0 14px rgba(70, 224, 255, 0.55);
+}
+.nx-w-dot.error {
+  background: var(--danger);
+  box-shadow: 0 0 14px rgba(255, 90, 31, 0.55);
+}
+.nx-w-foot {
+  border-top-color: var(--line-2);
+}
+.nx-w-foot:hover { color: var(--accent); }
+.nx-spark path,
+.nx-eq-line {
+  stroke: var(--cyan);
+  filter: drop-shadow(0 0 8px rgba(70, 224, 255, 0.4));
+}
+.nx-eq-fill { fill: rgba(70, 224, 255, 0.08); }
+.nx-eq-cursor { stroke: var(--accent); }
+.nx-eq-pt { fill: var(--accent); }
+.nx-bars i { background: var(--accent); }
+.nx-chip {
+  background: var(--accent);
+  color: #111;
+  border-radius: 2px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.nx-chip.ghost {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.nx-news-li,
+.nx-md-table td,
+.nx-basket td,
+.nx-pick-row,
+.nx-md-news,
+.nx-md-kv > div,
+.nx-saved-card,
+.nx-hvl-asset,
+.nx-ask-opt {
+  border-color: var(--line-2);
+}
+.nx-news-li,
+.nx-news-li a,
+.nx-md-news a,
+.nx-msg .cp-link,
+.nx-msg a {
+  color: var(--ink);
+}
+.nx-md-table th {
+  color: var(--accent);
+  border-bottom-color: rgba(255, 90, 31, 0.35);
+}
+.nx-md-table td {
+  color: var(--ink);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.nx-md-table {
+  table-layout: auto;
+}
+.nx-modal-body {
+  overflow: auto;
+}
+.nx-md-kv b { color: var(--ink); }
+.nx-heat {
+  border-radius: 2px;
+  color: var(--ink);
+}
+.nx-pick-bar,
+.nx-hvl-bar-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+.nx-pick-bar i {
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+}
+.nx-pick-sym,
+.nx-pick-score,
+.nx-hvl-bar-lbl {
+  color: var(--ink);
+}
+.nx-hvl-bar.win .nx-hvl-bar-lbl {
+  color: var(--gold);
+}
+.nx-hvl-pick {
+  border-radius: 2px;
+  color: #111;
+}
+.nx-asset {
+  min-width: 0;
+}
+.nx-asset-mark {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 1px solid currentColor;
+  opacity: 0.92;
+}
+.nx-asset-token .nx-asset-mark {
+  color: var(--cyan);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px rgba(70, 224, 255, 0.18), 0 0 12px rgba(70, 224, 255, 0.18);
+}
+.nx-asset-token .nx-asset-mark::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.nx-asset-stock .nx-asset-mark {
+  color: var(--gold);
+  border-radius: 2px;
+}
+.nx-asset-stock .nx-asset-mark::before,
+.nx-asset-stock .nx-asset-mark::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 2px;
+  background: currentColor;
+}
+.nx-asset-stock .nx-asset-mark::before {
+  left: 4px;
+  height: 5px;
+}
+.nx-asset-stock .nx-asset-mark::after {
+  left: 8px;
+  height: 9px;
+}
+.nx-asset-lp .nx-asset-mark {
+  color: var(--accent);
+  border-radius: 50%;
+}
+.nx-asset-lp .nx-asset-mark::before,
+.nx-asset-lp .nx-asset-mark::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: #101010;
+}
+.nx-asset-lp .nx-asset-mark::before { left: 1px; }
+.nx-asset-lp .nx-asset-mark::after { right: 1px; }
+
+/* ---- Phase system stays in place, only theme changes ---- */
+.nx-phase {
+  background: rgba(10, 10, 10, 0.66);
+  border-color: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  backdrop-filter: blur(10px);
+}
+.nx-phase-context { border-color: rgba(255, 206, 58, 0.42); }
+.nx-phase-discovery { border-color: rgba(70, 224, 255, 0.42); }
+.nx-phase-backtest { border-color: rgba(255, 90, 31, 0.42); }
+.nx-phase-trade { border-color: rgba(255, 206, 58, 0.52); }
+.nx-phase-idx {
+  background: var(--accent);
+  color: #111;
+  border-radius: 2px;
+  font-family: var(--mono);
+}
+.nx-phase-label {
+  color: var(--ink);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.1em;
+}
+.nx-phase-count {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-3);
+  border-radius: 2px;
+}
+.nx-phase-arrow {
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(255, 90, 31, 0.5);
+}
+
+/* ---- Conversation rail as landing-style spec console ---- */
+.nx-rail {
+  padding: 26px 22px 22px;
+  border-left: 0;
+  border-radius: 0 clamp(18px, 2vw, 30px) clamp(18px, 2vw, 30px) 0;
+  background:
+    radial-gradient(90% 50% at 100% 20%, rgba(255, 90, 31, 0.11), transparent 55%),
+    #111;
+}
+.nx-pill {
+  border-color: var(--accent);
+  color: var(--accent);
+  border-radius: 2px;
+  font-family: var(--mono);
+}
+.nx-pill b {
+  background: var(--accent);
+}
+.nx-hero h1 {
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(70, 224, 255, 0.18);
+}
+.nx-hero p,
+.nx-hs .l {
+  color: var(--ink-3);
+}
+.nx-hs .v {
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  color: var(--accent);
+}
+.nx-msg-role {
+  color: var(--accent);
+  font-family: var(--mono);
+}
+.nx-msg.user .nx-msg-body {
+  background: var(--accent);
+  color: #111;
+  border-radius: 4px;
+  font-family: var(--font-ui, "Archivo", system-ui, sans-serif);
+}
+.nx-msg.assistant .nx-msg-body {
+  color: var(--ink-2);
+}
+.nx-status {
+  color: var(--ink-3);
+  font-family: var(--mono);
+}
+.nx-status .spin {
+  background: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 90, 31, 0.65);
+}
+
+/* ---- Composer, prompts, saved, buttons ---- */
+.nx-composer-row,
+.nx-suggest button,
+.nx-save,
+.nx-modal-x,
+.nx-ask-opt,
+.nx-saved-actions button,
+.nx-basket-bot select,
+.nx-basket-al input {
+  background: #0e0e0e;
+  color: var(--ink);
+  border-color: var(--line);
+  border-radius: 4px;
+  font-family: var(--font-ui, "Archivo", system-ui, sans-serif);
+}
+.nx-composer-row {
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.nx-composer textarea {
+  color: var(--ink);
+  caret-color: var(--accent);
+}
+.nx-composer textarea::placeholder {
+  color: var(--ink-3);
+}
+.nx-send,
+.nx-ask-confirm,
+.nx-saved-actions .go,
+.nx-fab {
+  background: var(--accent);
+  color: #111;
+  border-radius: 4px;
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.nx-execute {
+  background: var(--accent);
+  color: #111;
+  border-radius: 4px;
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 0 1px rgba(255, 90, 31, 0.4), 0 0 22px rgba(255, 90, 31, 0.22);
+}
+.nx-execute:hover:not(:disabled) {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 30px rgba(255, 90, 31, 0.4);
+}
+.nx-send:hover,
+.nx-fab:not(:disabled):hover,
+.nx-save:hover:not(:disabled),
+.nx-ask-confirm:hover:not(:disabled),
+.nx-saved-actions button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgba(255, 90, 31, 0.18);
+}
+.nx-saved-actions .go:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #111;
+}
+.nx-fab {
+  box-shadow: 0 18px 52px rgba(255, 90, 31, 0.22);
+}
+.nx-fab.on {
+  background: var(--gold);
+  color: #111;
+  animation: nx-fab-pulse 1.8s ease-in-out infinite;
+}
+@keyframes nx-fab-pulse {
+  0%, 100% { box-shadow: 0 18px 52px rgba(255, 206, 58, 0.2), 0 0 0 0 rgba(255, 90, 31, 0); }
+  50% { box-shadow: 0 18px 58px rgba(255, 206, 58, 0.34), 0 0 0 5px rgba(255, 90, 31, 0.16); }
+}
+.nx-fab-dot,
+.nx-fab.on .nx-fab-dot {
+  background: #111;
+}
+.nx-save {
+  background: #0e0e0e;
+  color: var(--ink);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.nx-suggest button {
+  color: var(--ink-2);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.nx-suggest button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.nx-ask-q,
+.nx-ask-opt-l {
+  color: var(--ink);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.nx-ask-opt-c {
+  color: var(--ink-3);
+}
+.nx-ask-opt:hover,
+.nx-ask-opt.on {
+  border-color: var(--accent);
+  background: rgba(255, 90, 31, 0.08);
+}
+.nx-saved {
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 38px, var(--line-2) 38px, var(--line-2) 39px),
+    #0a0a0a;
+}
+.nx-saved h2 {
+  color: var(--ink);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.nx-saved-legs span {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+  border-radius: 2px;
+}
+
+.nx-quants-panel {
+  position: absolute;
+  inset: 38px 30px 28px;
+  z-index: 6;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, rgba(255, 90, 31, 0.12), transparent 34%),
+    radial-gradient(80% 80% at 84% 18%, rgba(70, 224, 255, 0.1), transparent 48%),
+    rgba(12, 12, 12, 0.92);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  padding: clamp(18px, 2.5vw, 34px);
+}
+.nx-quants-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.nx-quants-eyebrow b {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 90, 31, 0.65);
+}
+.nx-quants-panel h2 {
+  max-width: 760px;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  font-size: clamp(34px, 4.8vw, 66px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+.nx-quants-panel p {
+  max-width: 760px;
+  margin: 18px 0 28px;
+  color: var(--ink-2);
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.55;
+}
+.nx-quants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.nx-quants-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.nx-quants-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 9px 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nx-quants-tabs button:hover,
+.nx-quants-tabs button.on {
+  border-color: rgba(255, 90, 31, 0.58);
+  background: rgba(255, 90, 31, 0.1);
+  color: var(--ink);
+}
+.nx-quants-card {
+  min-height: 116px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 25px, rgba(255, 255, 255, 0.035) 25px, rgba(255, 255, 255, 0.035) 26px),
+    rgba(255, 255, 255, 0.025);
+  color: var(--ink);
+  text-decoration: none;
+}
+.nx-quants-card:hover {
+  border-color: rgba(255, 90, 31, 0.58);
+  background-color: rgba(255, 90, 31, 0.08);
+  box-shadow: 0 0 28px rgba(255, 90, 31, 0.13);
+}
+.nx-quants-card span {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nx-quants-card strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--gold);
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.nx-quants-card em {
+  display: block;
+  color: var(--ink-3);
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.nx-quants-run {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+  max-width: 760px;
+}
+.nx-quants-run button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  background: var(--gold);
+  color: #111;
+  cursor: pointer;
+  padding: 13px 18px;
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nx-quants-run small {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.nx-lab-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 0.75fr);
+  gap: 14px;
+  align-items: start;
+}
+.nx-lab-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255, 255, 255, 0.025) 28px, rgba(255, 255, 255, 0.025) 29px),
+    rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  padding: 16px;
+}
+.nx-lab-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.nx-lab-card-head span {
+  color: var(--ink);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.nx-lab-card-head div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nx-lab-card button,
+.nx-lab-template-row button,
+.nx-lab-ghost {
+  border: 1px solid rgba(255, 90, 31, 0.42);
+  border-radius: 4px;
+  background: rgba(255, 90, 31, 0.1);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 8px 11px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.nx-lab-card button:hover,
+.nx-lab-template-row button.on,
+.nx-lab-ghost:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c0c0c;
+}
+.nx-lab-card button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.nx-lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.nx-lab-primary {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: #0c0c0c !important;
+}
+.nx-lab-card p {
+  margin: 10px 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.nx-lab-form,
+.nx-lab-param-grid {
+  display: grid;
+  gap: 10px;
+}
+.nx-lab-form.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nx-lab-form.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.nx-lab-param-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 10px;
+}
+.nx-lab-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.nx-lab-field span,
+.nx-lab-weight {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.nx-lab-field input,
+.nx-lab-field select,
+.nx-lab-axis input,
+.nx-lab-leg-table input,
+.nx-lab-leg-table select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--ink);
+  padding: 10px 11px;
+  font-family: var(--font-ui, system-ui, sans-serif);
+  font-size: 13px;
+  outline: none;
+}
+.nx-lab-field input:focus,
+.nx-lab-field select:focus,
+.nx-lab-axis input:focus,
+.nx-lab-leg-table input:focus,
+.nx-lab-leg-table select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 90, 31, 0.12);
+}
+.nx-lab-template-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.nx-lab-table {
+  display: grid;
+  gap: 8px;
+}
+.nx-lab-table div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(90px, 0.35fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nx-lab-table.compact div {
+  grid-template-columns: 80px minmax(0, 1fr);
+}
+.nx-lab-table b {
+  color: var(--ink);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+}
+.nx-lab-table span {
+  color: var(--gold);
+  font-family: var(--mono);
+}
+.nx-lab-table em {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-3);
+  font-style: normal;
+  font-size: 12px;
+}
+.nx-lab-metric {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  text-transform: uppercase;
+}
+.nx-lab-metric b {
+  color: var(--gold);
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+}
+.nx-lab-curve {
+  width: 100%;
+  height: 116px;
+  margin: 14px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.3);
+}
+.nx-lab-curve path {
+  fill: none;
+  stroke: #46e0ff;
+  stroke-width: 2.4;
+}
+.nx-lab-empty {
+  display: grid;
+  place-items: center;
+  min-height: 116px;
+  margin: 14px 0;
+  border: 1px dashed var(--line);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.nx-lab-grid.live {
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
+}
+.nx-live-ribbon,
+.nx-live-ticket,
+.nx-live-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+.nx-live-ribbon span,
+.nx-live-stats span {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-2);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nx-live-stats b {
+  color: var(--gold);
+}
+.nx-live-ticket {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.nx-live-ticket div,
+.nx-live-order {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 10px;
+}
+.nx-live-ticket span,
+.nx-live-order span,
+.nx-live-order em,
+.nx-live-confirm span {
+  display: block;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.nx-live-ticket b,
+.nx-live-order b {
+  display: block;
+  color: var(--gold);
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  font-size: 15px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.nx-live-confirm {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.nx-live-confirm input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--ink);
+  padding: 11px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.nx-live-code {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--ink-2);
+  border-radius: 4px;
+  padding: 12px;
+  font: 11px/1.45 var(--mono);
+}
+.nx-live-code.small {
+  max-height: 260px;
+}
+.nx-live-order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.nx-live-order {
+  display: grid;
+  gap: 7px;
+}
+.nx-live-order.empty {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* ============================================================================
+   GMX Live Trading cockpit (nx-lt-*) — redesigned in the techwear protocol theme.
+   ============================================================================ */
+.nx-lt-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.nx-lt-headline { min-width: 0; flex: 1; }
+.nx-lt-title { font-size: clamp(30px, 4vw, 54px) !important; }
+.nx-lt-sub { margin: 14px 0 0 !important; max-width: 62ch; }
+.nx-lt-gate { display: inline-flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1px solid var(--line);
+  border-radius: 4px; background: rgba(255, 255, 255, 0.03); min-width: 226px; }
+.nx-lt-gate-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.nx-lt-gate.ok .nx-lt-gate-dot { background: var(--cyan); box-shadow: 0 0 13px rgba(70, 224, 255, 0.75); }
+.nx-lt-gate.gated .nx-lt-gate-dot { background: var(--accent); box-shadow: 0 0 13px rgba(255, 90, 31, 0.75); animation: nx-pulse 1.4s ease-in-out infinite; }
+.nx-lt-gate b { display: block; font: 800 13px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink); }
+.nx-lt-gate em { display: block; font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 3px; max-width: 30ch; line-height: 1.4; }
+
+.nx-lt-ribbon { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 16px; }
+.nx-lt-ribbon span { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid var(--line);
+  border-radius: 999px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.nx-lt-ribbon span i { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px rgba(70, 224, 255, 0.6); flex: none; }
+.nx-lt-ribbon span.warn { border-color: rgba(255, 90, 31, 0.5); color: var(--ink); }
+.nx-lt-ribbon span.warn i { background: var(--accent); box-shadow: 0 0 8px rgba(255, 90, 31, 0.6); }
+
+.nx-lt-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.nx-lt-kpi { padding: 14px 16px; border: 1px solid var(--line); border-radius: 4px;
+  background: repeating-linear-gradient(0deg, transparent, transparent 22px, rgba(255, 255, 255, 0.03) 22px, rgba(255, 255, 255, 0.03) 23px), rgba(255, 255, 255, 0.025); }
+.nx-lt-kpi span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 9px; }
+.nx-lt-kpi b { font-family: var(--font-numeric, "Orbitron", sans-serif); font-size: 24px; line-height: 1; color: var(--ink); }
+.nx-lt-kpi b.mono { font-family: var(--mono); font-size: 15px; }
+.nx-lt-kpi b.warn { color: var(--accent); }
+.nx-lt-tabs { margin-bottom: 18px; }
+
+.nx-lt-body { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(300px, 0.72fr); gap: 14px; align-items: start; }
+.nx-lt-main { min-width: 0; display: grid; gap: 14px; }
+.nx-lt-side-col { display: grid; gap: 14px; }
+.nx-lt-card { min-width: 0; border: 1px solid var(--line); border-radius: 4px; padding: 16px;
+  background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255, 255, 255, 0.022) 28px, rgba(255, 255, 255, 0.022) 29px), rgba(255, 255, 255, 0.03); }
+.nx-lt-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.nx-lt-card-head span { font: 800 12px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+.nx-lt-card-copy { color: var(--ink-2); font-size: 12.5px; line-height: 1.55; margin: 0 0 12px; }
+
+.nx-lt-ghost, .nx-lt-primary, .nx-lt-danger { border-radius: 4px; cursor: pointer; white-space: nowrap;
+  font: 700 11px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 9px 14px; transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s; }
+.nx-lt-ghost { border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); color: var(--ink-2); }
+.nx-lt-ghost:hover:not(:disabled) { border-color: rgba(70, 224, 255, 0.5); color: var(--ink); }
+.nx-lt-primary { border: 1px solid var(--accent); background: var(--accent); color: #0b0b0d; }
+.nx-lt-primary:hover:not(:disabled) { box-shadow: 0 0 24px rgba(255, 90, 31, 0.35); }
+.nx-lt-danger { border: 1px solid rgba(255, 90, 31, 0.5); background: rgba(255, 90, 31, 0.08); color: var(--accent); }
+.nx-lt-danger:hover:not(:disabled) { background: rgba(255, 90, 31, 0.16); }
+.nx-lt-ghost:disabled, .nx-lt-primary:disabled, .nx-lt-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.nx-lt-orders { display: grid; gap: 10px; }
+.nx-lt-order { border: 1px solid var(--line); border-radius: 4px; padding: 14px; background: rgba(255, 255, 255, 0.02); transition: border-color 0.15s; }
+.nx-lt-order:hover { border-color: rgba(70, 224, 255, 0.32); }
+.nx-lt-order header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.nx-lt-order-id { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.nx-lt-order-id b { font: 800 16px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.03em; color: var(--ink); overflow-wrap: anywhere; }
+.nx-lt-side { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; border: 1px solid; flex: none; }
+.nx-lt-side.long { color: var(--cyan); border-color: rgba(70, 224, 255, 0.45); background: rgba(70, 224, 255, 0.08); }
+.nx-lt-side.short { color: var(--accent); border-color: rgba(255, 90, 31, 0.45); background: rgba(255, 90, 31, 0.08); }
+.nx-lt-pill { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-3); flex: none; }
+.nx-lt-pill.ok { color: var(--cyan); border-color: rgba(70, 224, 255, 0.4); }
+.nx-lt-pill.live { color: var(--gold); border-color: rgba(255, 206, 58, 0.4); }
+.nx-lt-pill.warn { color: var(--accent); border-color: rgba(255, 90, 31, 0.4); }
+.nx-lt-order-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 12px 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); }
+.nx-lt-order-metrics span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px; }
+.nx-lt-order-metrics b { font: 700 13px var(--font-display, "Chakra Petch", sans-serif); color: var(--ink); overflow-wrap: anywhere; }
+.nx-lt-order footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.nx-lt-order footer > span { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.nx-lt-order-actions { display: inline-flex; gap: 8px; }
+
+.nx-lt-empty { text-align: center; padding: 42px 20px; border: 1px dashed var(--line); border-radius: 4px; }
+.nx-lt-empty b { display: block; font: 800 15px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink); margin-bottom: 8px; }
+.nx-lt-empty span { display: block; color: var(--ink-3); font-size: 13px; max-width: 44ch; margin: 0 auto 16px; line-height: 1.5; }
+
+.nx-lt-status { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin: 12px 0 0; line-height: 1.5; }
+.nx-lt-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.nx-lt-status i.spin { background: var(--accent); animation: nx-pulse 1s infinite; }
+
+.nx-lt-mini-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.nx-lt-mini-stats span { flex: 1; min-width: 72px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 4px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.nx-lt-mini-stats b { display: block; font-family: var(--font-numeric, "Orbitron", sans-serif); font-size: 20px; color: var(--ink); margin-top: 4px; }
+
+.nx-lt-formgroups { display: grid; gap: 14px; }
+.nx-lt-fieldset { border: 1px solid var(--line-2); border-radius: 4px; padding: 10px 14px 14px; margin: 0; min-width: 0; }
+.nx-lt-fieldset legend { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); padding: 0 6px; }
+.nx-lt-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+
+.nx-lt-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; margin: 16px 0; padding: 14px;
+  border: 1px solid var(--line); border-radius: 4px; background: rgba(70, 224, 255, 0.03); }
+.nx-lt-preview span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.nx-lt-preview b { font: 800 17px var(--font-display, "Chakra Petch", sans-serif); color: var(--ink); overflow-wrap: anywhere; }
+.nx-lt-preview b.mono { font-family: var(--mono); font-size: 13px; font-weight: 400; }
+.nx-lt-preview b.sm { font-size: 12px; }
+
+.nx-lt-confirm { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid rgba(255, 90, 31, 0.4); border-radius: 4px; background: rgba(255, 90, 31, 0.05); flex-wrap: wrap; }
+.nx-lt-confirm-copy { flex: 1; min-width: 200px; }
+.nx-lt-confirm-copy b { display: block; font: 800 12px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.nx-lt-confirm-copy span { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 4px; line-height: 1.45; }
+.nx-lt-confirm-copy code { font-family: var(--mono); color: var(--ink); }
+.nx-lt-confirm input { flex: 1; min-width: 200px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--ink); font-family: var(--mono); font-size: 12px; padding: 11px 12px; letter-spacing: 0.08em; }
+.nx-lt-confirm input:focus { outline: none; border-color: var(--accent); }
+.nx-lt-launch-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.nx-lt-launch-actions .nx-lt-primary, .nx-lt-launch-actions .nx-lt-ghost { padding: 12px 20px; font-size: 12px; }
+
+.nx-lt-wallets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+.nx-lt-wallet { text-align: left; border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.02); transition: border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+.nx-lt-wallet:hover:not(:disabled) { border-color: rgba(70, 224, 255, 0.45); }
+.nx-lt-wallet.on { border-color: var(--cyan); background: rgba(70, 224, 255, 0.07); box-shadow: 0 0 18px rgba(70, 224, 255, 0.12); }
+.nx-lt-wallet:disabled { opacity: 0.45; cursor: not-allowed; }
+.nx-lt-wallet span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.nx-lt-wallet b { display: block; font-family: var(--font-numeric, "Orbitron", sans-serif); font-size: 16px; color: var(--ink); margin: 6px 0 5px; }
+.nx-lt-wallet.on b { color: var(--cyan); }
+.nx-lt-wallet em { display: block; font-style: normal; font-size: 10.5px; color: var(--ink-3); line-height: 1.35; }
+.nx-lt-account-bar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: end; margin-bottom: 14px; }
+.nx-lt-account-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.nx-lt-detail { border: 1px solid var(--line); border-radius: 4px; padding: 13px; background: rgba(255, 255, 255, 0.02); min-width: 0; }
+.nx-lt-detail b { display: block; font: 800 12px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); }
+.nx-lt-detail span { display: block; font-size: 11px; color: var(--ink-3); margin: 4px 0 10px; line-height: 1.4; }
+
+.nx-lt-gaterow { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.nx-lt-gatecell { padding: 12px 14px; border: 1px solid var(--line); border-radius: 4px; background: rgba(255, 255, 255, 0.02); }
+.nx-lt-gatecell span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
+.nx-lt-gatecell b { font: 800 16px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); }
+.nx-lt-gatecell.ok b { color: var(--cyan); }
+.nx-lt-gatecell.warn b { color: var(--gold); }
+.nx-lt-gatecell.bad b { color: var(--accent); }
+
+.nx-lt-rows { display: grid; gap: 8px; }
+.nx-lt-row { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: start; padding: 11px 13px; border: 1px solid var(--line); border-radius: 4px; background: rgba(255, 255, 255, 0.02); }
+.nx-lt-row.error { border-color: rgba(255, 90, 31, 0.4); }
+.nx-lt-row.warning { border-color: rgba(255, 206, 58, 0.35); }
+.nx-lt-row-tag { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
+.nx-lt-row.error .nx-lt-row-tag { color: var(--accent); }
+.nx-lt-row.warning .nx-lt-row-tag { color: var(--gold); }
+.nx-lt-row b { display: block; font: 700 12px var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.nx-lt-row em { display: block; font-style: normal; font-size: 11px; color: var(--ink-3); margin-top: 3px; line-height: 1.4; }
+
+@media (max-width: 1100px) {
+  .nx-lt-body { grid-template-columns: 1fr; }
+  .nx-lt-account-grid { grid-template-columns: 1fr; }
+  .nx-lt-account-bar { grid-template-columns: 1fr; align-items: stretch; }
+  .nx-lt-wallets { grid-template-columns: 1fr; }
+  .nx-lt-order-metrics { grid-template-columns: repeat(2, 1fr); }
+}
+
+.nx-launch-back {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+}
+.nx-launch-modal {
+  width: min(1080px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, rgba(255, 90, 31, 0.14), transparent 34%),
+    radial-gradient(80% 70% at 86% 10%, rgba(70, 224, 255, 0.12), transparent 50%),
+    #0c0c0c;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.58);
+  padding: clamp(18px, 2.4vw, 28px);
+}
+.nx-launch-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.nx-launch-head h2 {
+  margin: 16px 0 0;
+  color: var(--ink);
+  font-family: var(--font-numeric, "Orbitron", system-ui, sans-serif);
+  font-size: clamp(30px, 4vw, 54px);
+  line-height: .95;
+  text-transform: uppercase;
+}
+.nx-launch-head p {
+  max-width: 760px;
+  margin: 12px 0 0;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.nx-launch-summary {
+  margin-bottom: 16px;
+}
+.nx-launch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr);
+  gap: 14px;
+  align-items: start;
+}
+.nx-launch-chain {
+  display: grid;
+  gap: 5px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nx-launch-chain:last-child {
+  border-bottom: 0;
+}
+.nx-launch-chain b {
+  color: var(--gold);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.nx-launch-chain span,
+.nx-launch-chain em {
+  color: var(--ink-3);
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.nx-launch-warn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.nx-launch-warn span {
+  border: 1px solid rgba(255, 206, 58, .32);
+  background: rgba(255, 206, 58, .08);
+  color: var(--gold);
+  border-radius: 4px;
+  padding: 7px 9px;
+  font: 10px/1.35 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.nx-launch-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.nx-launch-actions button {
+  border: 1px solid rgba(255, 90, 31, 0.42);
+  border-radius: 4px;
+  background: rgba(255, 90, 31, 0.1);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 10px 13px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.nx-launch-actions button:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c0c0c;
+}
+.nx-launch-actions button:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+.nx-thread-history {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.nx-lab-leg-table {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.nx-lab-leg-table > div {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.15fr) minmax(130px, .75fr) minmax(180px, 1fr) 92px 82px auto;
+  gap: 8px;
+}
+.nx-param-object {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+}
+.nx-param-row {
+  display: grid;
+  grid-template-columns: minmax(88px, .55fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.nx-param-row > span {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.nx-segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.nx-segment button {
+  flex: 1 1 auto;
+  min-height: 34px;
+  padding: 7px 8px !important;
+  border-color: var(--line) !important;
+  background: rgba(255,255,255,.03) !important;
+  color: var(--ink-2) !important;
+}
+.nx-segment button.on,
+.nx-segment button:hover {
+  border-color: rgba(255, 90, 31, .64) !important;
+  background: rgba(255, 90, 31, .16) !important;
+  color: var(--ink) !important;
+}
+.nx-compat {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.025);
+}
+.nx-compat b {
+  font: 800 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.nx-compat span {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.nx-compat.ok { border-color: rgba(70, 224, 255, .38); }
+.nx-compat.ok b { color: var(--cyan); }
+.nx-compat.warn { border-color: rgba(255, 206, 58, .44); }
+.nx-compat.warn b { color: var(--gold); }
+.nx-compat.bad { border-color: rgba(255, 90, 31, .55); }
+.nx-compat.bad b { color: var(--accent); }
+.nx-result-table {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.nx-result-table div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(0,0,0,.28);
+}
+.nx-result-table span {
+  color: var(--ink-3);
+  font: 9px var(--mono);
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.nx-result-table b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gold);
+  font: 700 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  white-space: nowrap;
+}
+.nx-lab-axis {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) repeat(3, 76px);
+  gap: 8px;
+  margin-top: 8px;
+}
+.nx-lab-weight {
+  align-self: end;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 11px;
+  background: rgba(0, 0, 0, 0.3);
+}
+.nx-lab-weight b {
+  color: var(--gold);
+}
+
+.nx-picker-trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  border: 1px solid var(--line) !important;
+  border-radius: 4px !important;
+  background:
+    linear-gradient(135deg, rgba(255, 90, 31, 0.09), transparent 45%),
+    rgba(0, 0, 0, 0.42) !important;
+  color: var(--ink) !important;
+  padding: 9px 10px !important;
+  font-family: var(--font-ui, system-ui, sans-serif) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.nx-picker-trigger:hover {
+  border-color: rgba(255, 90, 31, 0.7) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 90, 31, 0.16), transparent 48%),
+    rgba(0, 0, 0, 0.52) !important;
+  color: var(--ink) !important;
+}
+.nx-picker-trigger > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  color: inherit;
+}
+.nx-picker-trigger b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 13px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nx-picker-trigger em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-3);
+  font-style: normal;
+  font-size: 11px;
+}
+.nx-picker-back {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+}
+.nx-picker-modal {
+  width: min(680px, 94vw);
+  max-height: min(780px, 88vh);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    radial-gradient(70% 45% at 100% 0%, rgba(255, 90, 31, 0.16), transparent 65%),
+    repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(255, 255, 255, 0.035) 30px, rgba(255, 255, 255, 0.035) 31px),
+    #101010;
+  box-shadow: 0 36px 120px rgba(0, 0, 0, 0.82);
+}
+.nx-picker-modal.wide {
+  width: min(980px, 94vw);
+}
+.nx-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.nx-picker-head div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.nx-picker-head span {
+  color: var(--accent);
+  font: 10px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.nx-picker-head b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  font: 800 20px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.nx-picker-head button {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--ink);
+  cursor: pointer;
+}
+.nx-picker-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.1fr);
+  min-height: 470px;
+}
+.nx-picker-list,
+.nx-symbol-grid {
+  overflow: auto;
+}
+.nx-picker-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  border-right: 1px solid var(--line);
+}
+.nx-picker-list button,
+.nx-choice-grid button,
+.nx-symbol-grid button {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--ink);
+  cursor: pointer;
+}
+.nx-picker-list button,
+.nx-choice-grid button {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  text-align: left;
+}
+.nx-picker-list button.on,
+.nx-choice-grid button.on,
+.nx-symbol-grid button:hover {
+  border-color: rgba(255, 90, 31, 0.72);
+  background: rgba(255, 90, 31, 0.1);
+}
+.nx-picker-list b,
+.nx-choice-grid b {
+  font: 800 13px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.nx-picker-list small,
+.nx-choice-grid small {
+  color: var(--ink-3);
+  line-height: 1.35;
+}
+.nx-picker-detail {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 16px;
+  overflow: auto;
+}
+.nx-picker-detail.single {
+  max-height: calc(88vh - 70px);
+}
+.nx-picker-visual {
+  width: 100%;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    repeating-linear-gradient(90deg, transparent, transparent 32px, rgba(255, 255, 255, 0.04) 32px, rgba(255, 255, 255, 0.04) 33px),
+    rgba(0, 0, 0, 0.3);
+}
+.nx-picker-visual path,
+.nx-picker-visual line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 2;
+}
+.nx-picker-visual .hot,
+.nx-picker-visual circle {
+  stroke: var(--accent);
+}
+.nx-picker-visual .cool {
+  stroke: #46e0ff;
+}
+.nx-picker-visual circle {
+  fill: #101010;
+  stroke-width: 3;
+}
+.nx-picker-copy {
+  display: grid;
+  gap: 6px;
+}
+.nx-picker-copy b {
+  color: var(--gold);
+  font: 11px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nx-picker-copy p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.nx-picker-param-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.nx-picker-param-row span {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 6px 8px;
+  color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.035);
+  font: 10px var(--mono);
+}
+.nx-picker-primary {
+  justify-self: start;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  background: var(--gold);
+  color: #111;
+  cursor: pointer;
+  padding: 11px 15px;
+  font: 800 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nx-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 9px;
+}
+.nx-symbol-search {
+  width: calc(100% - 32px);
+  margin: 16px 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.44);
+  color: var(--ink);
+  outline: none;
+  padding: 12px;
+  font: 13px var(--font-ui, system-ui, sans-serif);
+}
+.nx-symbol-search:focus {
+  border-color: var(--accent);
+}
+.nx-symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+  padding: 16px;
+  max-height: 560px;
+}
+.nx-symbol-grid button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  text-align: left;
+}
+.nx-symbol-grid span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.nx-symbol-grid b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 13px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.04em;
+}
+.nx-symbol-grid small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-3);
+}
+.nx-symbol-grid em {
+  color: var(--gold);
+  font: 11px var(--mono);
+  font-style: normal;
+}
+
+/* ---- Editable basket and modal details ---- */
+.nx-w-basket { width: 380px; }
+.nx-basket-bot select:focus,
+.nx-basket-al input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 90, 31, 0.08);
+}
+.nx-basket-px,
+.nx-basket-al span {
+  color: var(--ink-3);
+}
+.nx-basket-lock button {
+  color: var(--ink-3);
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+.nx-basket-lock button.on,
+.nx-basket-lock button:hover {
+  color: var(--accent);
+  border-color: rgba(255, 90, 31, 0.35);
+  background: rgba(255, 90, 31, 0.08);
+}
+.nx-basket-lock svg {
+  width: 15px;
+  height: 15px;
+}
+.nx-modal-back {
+  background: rgba(0, 0, 0, 0.64);
+  backdrop-filter: blur(8px);
+}
+.nx-modal {
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 90, 31, 0.045), transparent 28%),
+    #101010;
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.78);
+}
+.nx-modal-x:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---- Themed discovery/intake controls ---- */
+.nx-intake {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.nx-intake .nx-w-rationale,
+.nx-intake-go {
+  grid-column: 1 / -1;
+}
+.nx-intake-label {
+  margin-bottom: 5px;
+  color: var(--ink-2);
+  font-family: var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.nx-intake-input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #0b0b0b;
+  color: var(--ink);
+  font: 12px var(--mono);
+  outline: none;
+}
+.nx-intake-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 90, 31, 0.16);
+}
+.nx-intake-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nx-intake-slider input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+.nx-intake-go {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 9px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background: var(--accent);
+  color: #111;
+  font: 700 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+@media (max-width: 1180px) {
+  .nexa { grid-template-columns: 80px minmax(0,1fr) 340px; }
+}
+
+@media (max-width: 820px) {
+  .nexa {
+    position: relative;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 8px;
+  }
+  .nexa.board-active,
+  .nexa.rail-off,
+  .nexa.rail-off.board-active,
+  .nexa.lab-view,
+  .nexa.lab-view.board-active {
+    grid-template-columns: 1fr;
+  }
+  .nx-side,
+  .nexa.board-active .nx-side,
+  .nexa.rail-off .nx-side,
+  .nexa.rail-off.board-active .nx-side,
+  .nexa.lab-view .nx-side,
+  .nexa.lab-view.board-active .nx-side {
+    width: auto;
+    min-width: 0;
+    opacity: 1;
+    display: block;
+    padding: 14px;
+    border-radius: 18px 18px 0 0;
+  }
+  .nx-nav { flex-direction: row; overflow-x: auto; }
+  .nx-stage {
+    min-height: 68vh;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+  .nx-rail {
+    min-height: 36vh;
+    border-radius: 0 0 18px 18px;
+    border-left: 1px solid var(--line);
+  }
+  .nexa.rail-off .nx-rail,
+  .nexa.lab-view .nx-rail {
+    display: none;
+  }
+  .nx-quants-panel {
+    position: relative;
+    inset: auto;
+    margin: 52px 12px 18px;
+  }
+  .nx-lab-grid,
+  .nx-lab-form.two,
+  .nx-lab-form.three,
+  .nx-lab-leg-table > div,
+  .nx-lab-axis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Copilot rail + wallet surface ---- */
+.nexa.board-active {
+  grid-template-columns: 86px minmax(0, 1fr) 340px;
+}
+.nexa.board-active .nx-side {
+  width: auto;
+  min-width: 0;
+  padding: 20px 10px 18px;
+  margin: 0;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+  border-right: 1px solid rgba(255, 90, 31, 0.18);
+}
+.nexa.board-active .nx-brand {
+  justify-content: center;
+}
+.nexa.board-active .nx-brand-name,
+.nexa.board-active .nx-brand-sub,
+.nexa.board-active .nx-nav-item span,
+.nexa.board-active .nx-wallet-copy {
+  display: none;
+}
+.nexa.board-active .nx-nav-item {
+  justify-content: center;
+  padding: 12px 8px;
+}
+.nexa.board-active .nx-side-foot {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.nexa.rail-off,
+.nexa.rail-off.board-active,
+.nexa.lab-view,
+.nexa.lab-view.board-active {
+  grid-template-columns: 280px minmax(0, 1fr) 0;
+}
+.nexa.rail-off .nx-brand,
+.nexa.lab-view .nx-brand {
+  justify-content: flex-start;
+}
+.nexa.rail-off .nx-brand-name,
+.nexa.rail-off .nx-brand-sub,
+.nexa.rail-off .nx-nav-item span,
+.nexa.rail-off .nx-wallet-copy,
+.nexa.lab-view .nx-brand-name,
+.nexa.lab-view .nx-brand-sub,
+.nexa.lab-view .nx-nav-item span,
+.nexa.lab-view .nx-wallet-copy {
+  display: block;
+}
+
+.nx-wallet-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 90, 31, 0.22);
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(255, 90, 31, 0.13), rgba(255, 206, 58, 0.05));
+  color: var(--ink);
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.nx-wallet-card.on {
+  border-color: rgba(70, 224, 255, 0.42);
+}
+.nx-wallet-session-bridge {
+  display: none;
+}
+.nx-wallet-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #111;
+  box-shadow: 0 0 26px rgba(255, 90, 31, 0.28);
+}
+.nx-wallet-copy {
+  min-width: 0;
+}
+.nx-wallet-copy b {
+  display: block;
+  font: 800 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.nx-wallet-copy em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-3);
+  font: 11px var(--mono);
+  font-style: normal;
+}
+.nx-wallet-back {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(10px);
+}
+.nx-wallet-modal {
+  width: min(680px, 94vw);
+  max-height: min(650px, 86vh);
+  overflow: auto;
+  border: 1px solid rgba(255, 90, 31, 0.28);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(255, 90, 31, 0.08), rgba(0, 0, 0, 0.1) 24%), #101010;
+  box-shadow: 0 42px 120px rgba(0, 0, 0, 0.82);
+}
+.nx-wallet-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.nx-wallet-head h2 {
+  margin: 8px 0 4px;
+  font: 900 18px var(--font-numeric, var(--font-display));
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.nx-wallet-head p,
+.nx-wallet-muted {
+  margin: 0;
+  color: var(--ink-3);
+  font: 13px/1.55 var(--font-ui, system-ui, sans-serif);
+}
+.nx-wallet-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+.nx-wallet-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--ink-3);
+  padding: 8px 12px;
+  font: 800 11px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.nx-wallet-tabs button.on,
+.nx-wallet-tabs button:hover {
+  color: var(--ink);
+  border-color: rgba(255, 90, 31, 0.5);
+  background: rgba(255, 90, 31, 0.1);
+}
+.nx-wallet-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+.nx-wallet-panel {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 12px;
+}
+.nx-wallet-panel h3 {
+  margin: 0 0 9px;
+  font: 800 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.nx-wallet-auth-btn,
+.nx-wallet-auth button,
+.nx-wallet-history-head button,
+.nx-wallet-actions button {
+  border: 1px solid rgba(255, 90, 31, 0.35);
+  border-radius: 4px;
+  background: rgba(255, 90, 31, 0.1);
+  color: var(--ink);
+  padding: 8px 10px;
+  font: 700 11px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.nx-wallet-auth-line {
+  color: var(--ink-3);
+  font: 12px var(--mono);
+}
+.nx-wallet-auth-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nx-wallet-auth-compact span {
+  min-width: 0;
+}
+.nx-wallet-auth-compact b {
+  display: block;
+  font: 800 11px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nx-wallet-auth-compact em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+  font: 12px var(--mono);
+  font-style: normal;
+}
+.nx-wallet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.nx-wallet-actions button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.nx-wallet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+.nx-wallet-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.nx-wallet-row b {
+  font: 12px var(--mono);
+}
+.nx-wallet-row em {
+  color: var(--cyan);
+  font: 11px var(--mono);
+  font-style: normal;
+}
+.nx-wallet-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: var(--ink-3);
+  padding: 12px;
+  font: 12px/1.45 var(--font-ui, system-ui, sans-serif);
+}
+.nx-wallet-history-head,
+.nx-credit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nx-credit-head {
+  margin-bottom: 10px;
+  color: var(--ink-2);
+  font: 12px var(--mono);
+}
+.nx-credit-bar {
+  height: 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+.nx-credit-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  box-shadow: 0 0 20px rgba(255, 206, 58, 0.3);
+}
+
+.nx-step-groups {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.nx-step-group {
+  border: 1px solid rgba(255, 90, 31, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  overflow: hidden;
+}
+.nx-step-group-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.nx-step-group-head span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font: 800 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nx-step-group-head span b {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #111;
+  font: 800 11px var(--mono);
+}
+.nx-step-group-head em {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  font: 10px var(--mono);
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.nx-step-group.open {
+  border-color: rgba(255, 90, 31, 0.42);
+}
+.nx-step-group-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  padding: 0 9px 10px;
+}
+.nx-step-chip {
+  width: 100%;
+  border: 1px solid rgba(255, 90, 31, 0.22);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--ink);
+  padding: 8px 10px;
+  text-align: left;
+  opacity: 0.7;
+}
+.nx-step-chip.clickable {
+  opacity: 1;
+  cursor: pointer;
+}
+.nx-step-chip.clickable:hover {
+  border-color: var(--accent);
+  background: rgba(255, 90, 31, 0.12);
+}
+.nx-step-chip span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent);
+  font: 9px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.nx-step-chip b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 12px var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.03em;
+}
+.nx-widget.nx-focused {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(255, 206, 58, 0.55), 0 0 38px rgba(255, 206, 58, 0.18), 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+@media (max-width: 820px) {
+  .nexa.board-active,
+  .nexa.rail-off,
+  .nexa.rail-off.board-active,
+  .nexa.lab-view,
+  .nexa.lab-view.board-active {
+    grid-template-columns: 1fr;
+  }
+  .nexa.board-active .nx-brand-name,
+  .nexa.board-active .nx-brand-sub,
+  .nexa.board-active .nx-nav-item span,
+  .nexa.board-active .nx-wallet-copy {
+    display: block;
+  }
+  .nx-wallet-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,423 @@
+@import "tailwindcss";
+
+:root {
+  --background: #000000;
+  --foreground: #f8fbff;
+  --font-kapiler: "Kapiler Regular", "Kapiler", "Orbitron", "Rajdhani", fantasy;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: #000000;
+}
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-kapiler);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ═══════════════════════════════════════
+   Background
+   ═══════════════════════════════════════ */
+
+.duality-background-base {
+  filter: brightness(0.82) contrast(1.08) drop-shadow(0 0 6px rgb(220 235 255 / 0.075));
+  opacity: 0.52;
+}
+
+.duality-background-torch {
+  --torch-x: 50%;
+  --torch-y: 50%;
+  --torch-opacity: 0;
+  filter: brightness(2.05) contrast(1.18) drop-shadow(0 0 14px rgb(210 235 255 / 0.2));
+  opacity: var(--torch-opacity);
+  mask-image: radial-gradient(circle 150px at var(--torch-x) var(--torch-y), #000 0%, #000 34%, rgb(0 0 0 / 0.58) 52%, transparent 78%);
+  -webkit-mask-image: radial-gradient(circle 150px at var(--torch-x) var(--torch-y), #000 0%, #000 34%, rgb(0 0 0 / 0.58) 52%, transparent 78%);
+}
+
+/* ═══════════════════════════════════════
+   Split Stage
+   ═══════════════════════════════════════ */
+
+.duality-split-stage {
+  --left-intensity: 0;
+  --right-intensity: 0;
+  --split-x: 50%;
+  --split-y: 50%;
+  isolation: isolate;
+  cursor: pointer;
+}
+
+/* Halves are VISUAL ONLY — no pointer events, purely for the glow gradients.
+   Each half spans the full stage width so its radial glow can extend smoothly
+   across the center; a mask gradient softly fades each half toward the opposite side. */
+.duality-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  will-change: opacity;
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.duality-half.side-dimmed {
+  opacity: 0.2;
+}
+
+.duality-half-left {
+  background:
+    radial-gradient(circle 420px at var(--split-x) var(--split-y), rgb(255 210 50 / calc(0.02 + var(--left-intensity) * 0.22)), transparent 70%),
+    linear-gradient(to right, rgb(255 180 40 / calc(0.05 + var(--left-intensity) * 0.18)) 0%, rgb(255 140 0 / calc(0.025 + var(--left-intensity) * 0.1)) 35%, transparent 65%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, black 30%, transparent 75%);
+  mask-image: linear-gradient(to right, black 0%, black 30%, transparent 75%);
+}
+
+.duality-half-right {
+  background:
+    radial-gradient(circle 420px at var(--split-x) var(--split-y), rgb(220 240 255 / calc(0.02 + var(--right-intensity) * 0.22)), transparent 70%),
+    linear-gradient(to left, rgb(200 220 255 / calc(0.05 + var(--right-intensity) * 0.18)) 0%, rgb(160 180 220 / calc(0.025 + var(--right-intensity) * 0.1)) 35%, transparent 65%);
+  -webkit-mask-image: linear-gradient(to left, black 0%, black 30%, transparent 75%);
+  mask-image: linear-gradient(to left, black 0%, black 30%, transparent 75%);
+}
+
+/* ═══════════════════════════════════════
+   Orb — ON TOP, fully interactive, transparent
+   ═══════════════════════════════════════ */
+
+.duality-orb-slot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(440px, 42vw, 680px);
+  height: clamp(440px, 42vw, 680px);
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  pointer-events: auto;
+  /* Soft radial mask so the canvas/bloom never produces a hard rectangular edge. */
+  -webkit-mask-image: radial-gradient(circle at center, black 0%, black 52%, transparent 88%);
+  mask-image: radial-gradient(circle at center, black 0%, black 52%, transparent 88%);
+}
+
+/* ═══════════════════════════════════════
+   Hero Titles — DUALITY at top center
+   ═══════════════════════════════════════ */
+
+.hero-titles {
+  position: absolute;
+  left: 50%;
+  top: 2rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 50;
+  pointer-events: none;
+  will-change: opacity, transform;
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-titles.is-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-16px);
+}
+
+.hero-title-main {
+  font-size: clamp(2rem, 5.5vw, 5.5rem);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  color: rgb(255 255 255 / 0.9);
+  filter: drop-shadow(0 0 24px rgba(120, 220, 255, 0.18));
+}
+
+.hero-subtitle {
+  margin-top: 0.5rem;
+  font-size: clamp(0.8rem, 1.8vw, 1.5rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgb(255 255 255 / 0.7);
+  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.12));
+}
+
+.hero-tagline {
+  margin-top: 0.3rem;
+  font-size: clamp(0.55rem, 0.9vw, 0.8rem);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgb(255 255 255 / 0.35);
+}
+
+/* ═══════════════════════════════════════
+   Faction Panels
+   
+   Each panel is a flex column anchored to its edge.
+   Title sits inside the panel at a fixed position.
+   In IDLE: title is vertically centered (via padding-top).
+   On ACTIVATION: title slides to top, content appears below.
+   
+   Panels are positioned at the LEFT and RIGHT edges,
+   away from the center orb.
+   ═══════════════════════════════════════ */
+
+.faction-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  z-index: 35;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem;
+  overflow: visible;
+  overflow-anchor: none;
+}
+
+.faction-panel-left {
+  left: 0;
+  align-items: flex-start;
+  padding-left: clamp(1.5rem, 4vw, 4rem);
+}
+
+.faction-panel-right {
+  right: 0;
+  align-items: flex-end;
+  text-align: right;
+  padding-right: clamp(1.5rem, 4vw, 4rem);
+}
+
+/* ═══════════════════════════════════════
+   Faction Titles
+   ═══════════════════════════════════════ */
+
+.faction-title {
+  font-size: clamp(1.6rem, 3vw, 2.8rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  line-height: 0.95;
+  flex-shrink: 0;
+  align-self: center;
+  text-align: center;
+  opacity: 1;
+  animation: none !important;
+}
+
+/* Both idle and active states stay fully lit — no pulse. */
+.faction-title.idle-glow,
+.faction-title.active-glow {
+  opacity: 1;
+  animation: none !important;
+}
+
+.faction-title.title-activated {
+  /* Reserved marker class — panel stays centered; content expands below it. */
+}
+
+.faction-title-gold {
+  color: rgb(255 215 0 / 0.92);
+  text-shadow:
+    0 0 18px rgba(255, 215, 0, 0.35),
+    0 0 36px rgba(255, 215, 0, 0.15),
+    0 0 60px rgba(255, 215, 0, 0.08);
+}
+
+.faction-title-cyan {
+  color: rgb(200 230 255 / 0.92);
+  text-shadow:
+    0 0 18px rgba(200, 230, 255, 0.35),
+    0 0 36px rgba(200, 230, 255, 0.15),
+    0 0 60px rgba(200, 230, 255, 0.08);
+}
+
+
+/* ═══════════════════════════════════════
+   Faction Content — hidden by default, per-side reveal
+   ═══════════════════════════════════════ */
+
+.faction-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 26rem;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity, transform;
+  transform: translateY(16px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              max-height 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              margin 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: 0.12s;
+  margin-top: 0;
+  flex-shrink: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
+.faction-content.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  max-height: 600px;
+  margin-top: 1rem;
+}
+
+/* Content typography */
+.faction-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.faction-heading {
+  margin-top: 0.4rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.88);
+}
+
+.faction-desc {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 0.5);
+}
+
+.faction-list {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: rgb(255 255 255 / 0.6);
+}
+
+.faction-list-right {
+  align-items: flex-end;
+}
+
+/* Staggered list items — GPU-only transitions */
+.faction-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+  will-change: opacity, transform;
+  transform: translateX(-8px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.faction-content .faction-list-right .faction-list-item,
+.faction-panel-right .faction-list-item {
+  transform: translateX(8px);
+}
+
+.faction-content.is-visible .faction-list-item {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Dots */
+.faction-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.faction-dot-gold {
+  background: rgb(255 215 0);
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.7);
+}
+
+.faction-dot-cyan {
+  background: rgb(100 220 255);
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.7);
+}
+
+/* Buttons */
+.faction-btn {
+  padding: 0.55rem 1.4rem;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.faction-btn-gold {
+  background: rgb(255 215 0 / 0.08);
+  border: 1px solid rgb(255 215 0 / 0.28);
+  color: rgb(255 215 0);
+}
+.faction-btn-gold:hover {
+  background: rgb(255 215 0 / 0.18);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
+}
+
+.faction-btn-cyan {
+  background: rgb(100 220 255 / 0.08);
+  border: 1px solid rgb(100 220 255 / 0.28);
+  color: rgb(100 220 255);
+}
+.faction-btn-cyan:hover {
+  background: rgb(100 220 255 / 0.18);
+  box-shadow: 0 0 20px rgba(100, 220, 255, 0.15);
+}
+
+.faction-btn-hover {
+  position: absolute;
+  bottom: -1.2rem;
+  opacity: 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+
+.group:hover .faction-btn-hover {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════ */
+
+@media (max-width: 760px) {
+  .duality-orb-slot {
+    width: min(86vw, 420px);
+    height: min(86vw, 420px);
+  }
+
+  .faction-panel {
+    width: 44%;
+    padding: 1rem;
+  }
+
+  .faction-title {
+    font-size: clamp(1.1rem, 5vw, 1.8rem) !important;
+  }
+}
