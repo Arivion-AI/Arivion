@@ -1,0 +1,330 @@
+<svg
+  width="1920"
+  height="1080"
+  viewBox="0 0 1920 1080"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect width="1920" height="1080" fill="#000000"/>
+
+  <style>
+    .line {
+      stroke: #8a8a8a;
+      stroke-width: 1.15;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.5;
+    }
+
+    .faint {
+      stroke: #777777;
+      stroke-width: 0.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.25;
+    }
+
+    .dim {
+      stroke: #999999;
+      stroke-width: 1.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.35;
+    }
+
+    .dot {
+      fill: #8a8a8a;
+      opacity: 0.45;
+    }
+
+    .soft {
+      fill: #8a8a8a;
+      opacity: 0.22;
+    }
+
+    .dash {
+      stroke-dasharray: 8 10;
+    }
+  </style>
+
+  <!-- TOP LEFT RADAR GLYPH -->
+  <g transform="translate(150 155)">
+    <circle r="120" class="faint"/>
+    <circle r="92" class="line"/>
+    <circle r="70" class="faint"/>
+    <circle r="44" class="faint"/>
+    <circle r="18" class="soft"/>
+
+    <path d="M-120 0 H-86" class="line"/>
+    <path d="M86 0 H120" class="line"/>
+    <path d="M0 -120 V-86" class="line"/>
+    <path d="M0 86 V120" class="line"/>
+
+    <circle cx="-92" cy="0" r="6" class="line"/>
+    <circle cx="92" cy="0" r="6" class="line"/>
+    <circle cx="0" cy="-92" r="5" class="dot"/>
+    <circle cx="0" cy="92" r="5" class="dot"/>
+
+    <path d="M-95 -85 C-70 -112 -32 -126 6 -122" class="faint"/>
+    <path d="M52 104 C84 82 103 48 109 10" class="faint"/>
+  </g>
+
+  <!-- TOP EDGE CIRCUITS -->
+  <g>
+    <path d="M380 78 H515 L545 48 H635" class="line"/>
+    <path d="M660 48 H715" class="faint"/>
+    <circle cx="535" cy="58" r="5" class="line"/>
+    <circle cx="642" cy="48" r="3" class="dot"/>
+
+    <path d="M735 86 H840" class="faint"/>
+    <path d="M805 62 H905" class="faint dash"/>
+    <path d="M915 62 H960" class="line"/>
+
+    <path d="M1180 70 H1295" class="line"/>
+    <path d="M1310 70 H1380" class="faint dash"/>
+    <circle cx="1165" cy="70" r="4" class="dot"/>
+
+    <path d="M1515 68 H1585" class="faint dash"/>
+  </g>
+
+  <!-- TOP CENTER SMALL GLYPH -->
+  <g transform="translate(960 92)">
+    <circle r="15" class="faint"/>
+    <path d="M0 -24 L14 0 L0 24 L-14 0 Z" class="line"/>
+    <circle r="3" class="dot"/>
+    <path d="M0 35 V82" class="line dash"/>
+    <path d="M-8 95 H8" class="line"/>
+    <path d="M-5 112 H5" class="faint"/>
+    <path d="M-18 -52 H18" class="faint"/>
+    <path d="M-8 -66 L0 -78 L8 -66" class="line"/>
+  </g>
+
+  <!-- TOP RIGHT LOGO -->
+  <g
+    transform="translate(1645 160) scale(1.45)"
+    fill="#8a8a8a"
+    opacity="0.42"
+  >
+    <path d="M-14.3,-84.8 L-27.3,-81.7 L-18.7,-54.3 L-26.9,-51.2 L-39.9,-76.6 L-51.2,-69.7 L-34.2,-46.2 L-29.5,-49.1 L-15.1,-24.3 L-8.4,-27.0 L-15.8,-54.7 L-9.8,-56.2 Z"/>
+    <path d="M68.5,-50.6 L44.9,-33.5 L48.3,-28.0 L23.6,-13.9 L26.3,-7.2 L53.8,-14.5 L55.0,-9.3 L83.7,-13.8 L80.6,-26.8 L54.0,-18.2 L50.2,-26.3 L75.5,-39.2 Z"/>
+    <path d="M13.1,24.3 L6.5,27.1 L13.6,53.6 L7.9,55.2 L12.4,83.9 L25.4,80.8 L16.9,54.6 L25.0,51.0 L37.9,75.7 L49.3,68.8 L32.2,45.3 L27.1,48.3 Z"/>
+    <path d="M-28.3,7.4 L-55.2,14.5 L-56.9,8.4 L-85.7,13.0 L-82.6,25.9 L-55.9,17.4 L-52.6,25.8 L-77.4,38.3 L-70.4,49.7 L-46.9,32.7 L-49.8,27.8 L-25.6,14.0 Z"/>
+    <path d="M-61.6,-60.9 L-70.3,-50.7 L-47.3,-34.0 L-50.8,-28.5 L-25.4,-14.0 L-21.0,-19.8 Z"/>
+    <path d="M49.5,-69.5 L32.6,-46.4 L27.7,-49.1 L13.2,-24.2 L19.0,-19.8 L59.6,-60.8 Z"/>
+    <path d="M23.4,14.1 L19.0,19.8 L59.5,60.1 L68.3,49.8 L45.8,33.4 L48.9,28.6 Z"/>
+    <path d="M-0.8,-85.9 L-0.9,-27.9 L6.3,-27.0 L13.9,-55.0 L7.9,-56.4 L12.4,-84.8 Z"/>
+    <path d="M-28.3,-7.2 L-56.6,-14.7 L-57.9,-9.5 L-85.7,-13.8 L-86.7,-0.5 L-29.2,0.0 Z"/>
+    <path d="M-21.2,19.6 L-61.6,60.0 L-51.7,68.5 L-35.0,46.2 L-29.8,49.4 L-15.2,24.4 Z"/>
+    <path d="M27.3,0.2 L26.4,7.3 L54.6,14.8 L56.1,8.6 L83.7,12.9 L84.7,-0.4 Z"/>
+    <path d="M-8.3,27.1 L-15.9,55.0 L-10.0,56.5 L-14.4,83.9 L-1.1,84.9 L-1.1,28.0 Z"/>
+    <path d="M-26.7,49.9 L-39.9,75.6 L-27.6,80.8 L-18.6,53.4 Z"/>
+    <path d="M25.8,-81.7 L16.7,-54.3 L24.6,-50.8 L38.0,-76.5 Z"/>
+    <path d="M52.8,17.1 L49.5,25.2 L75.5,38.2 L80.4,25.9 Z"/>
+    <path d="M-77.5,-39.1 L-82.4,-26.8 L-54.8,-18.1 L-51.5,-26.1 Z"/>
+  </g>
+
+  <!-- RIGHT EDGE CIRCUITS -->
+  <g>
+    <path d="M1848 0 V150 L1818 180 V285" class="line"/>
+    <path d="M1872 0 V185" class="faint"/>
+    <path d="M1895 0 V245" class="faint"/>
+    <path d="M1795 72 V205 H1765" class="line"/>
+    <circle cx="1795" cy="72" r="4" class="dot"/>
+    <circle cx="1765" cy="205" r="4" class="line"/>
+
+    <path d="M1852 335 V450 L1828 474 H1770" class="line"/>
+    <circle cx="1852" cy="335" r="5" class="line"/>
+    <circle cx="1770" cy="474" r="4" class="dot"/>
+
+    <path d="M1860 520 V665 L1822 703 V795" class="line"/>
+    <path d="M1892 435 V725" class="faint"/>
+    <path d="M1760 620 H1815" class="faint dash"/>
+  </g>
+
+  <!-- RIGHT ABSTRACT GLYPHS -->
+  <g transform="translate(1600 365)">
+    <path d="M0 0 L55 -45 L115 0 L55 42 Z" class="faint"/>
+    <circle cx="55" cy="0" r="34" class="line"/>
+    <circle cx="55" cy="0" r="6" class="dot"/>
+    <path d="M55 42 V120" class="line"/>
+    <circle cx="55" cy="132" r="5" class="line"/>
+
+    <path d="M-120 -70 L-70 -35 L-20 -70" class="line"/>
+    <path d="M-95 -55 V-12" class="line"/>
+    <circle cx="-120" cy="-70" r="3" class="dot"/>
+    <circle cx="-70" cy="-35" r="3" class="dot"/>
+    <circle cx="-20" cy="-70" r="3" class="dot"/>
+
+    <path d="M-15 105 H30" class="faint dash"/>
+    <path d="M88 105 H148" class="faint"/>
+    <path d="M148 105 L176 132" class="faint"/>
+  </g>
+
+  <g transform="translate(1780 575)">
+    <path d="M0 -38 L36 -18 L36 22 L0 42 L-36 22 L-36 -18 Z" class="line"/>
+    <circle r="12" class="faint"/>
+    <circle r="3" class="dot"/>
+    <path d="M-66 -8 H-95" class="faint"/>
+    <circle cx="-105" cy="-8" r="4" class="line"/>
+    <path d="M66 0 H110 V-58" class="line"/>
+    <circle cx="110" cy="-58" r="4" class="dot"/>
+  </g>
+
+  <!-- LEFT SIDE CIRCUITS -->
+  <g>
+    <path d="M34 260 V485 L70 521 V628" class="line"/>
+    <path d="M70 628 V820 L34 858 V1010" class="line"/>
+    <path d="M58 285 V470" class="faint dash"/>
+    <circle cx="34" cy="260" r="4" class="line"/>
+    <circle cx="70" cy="628" r="5" class="line"/>
+    <circle cx="34" cy="858" r="4" class="dot"/>
+
+    <path d="M118 430 L164 475" class="line"/>
+    <path d="M164 475 V568" class="line dash"/>
+    <circle cx="118" cy="430" r="3" class="dot"/>
+
+    <path d="M120 660 V770" class="faint dash"/>
+    <circle cx="120" cy="645" r="5" class="line"/>
+    <circle cx="120" cy="675" r="4" class="dot"/>
+
+    <path d="M320 650 V790" class="line"/>
+    <path d="M330 650 H390" class="line"/>
+    <path d="M330 666 H388" class="faint"/>
+    <path d="M330 682 H378" class="faint"/>
+    <circle cx="320" cy="650" r="4" class="dot"/>
+  </g>
+
+  <!-- LOWER LEFT PYRAMID EYE GLYPH -->
+  <g transform="translate(210 865)">
+    <path d="M0 -160 L125 70 H-125 Z" class="line"/>
+    <path d="M0 -105 L88 58 H-88 Z" class="faint"/>
+    <path d="M-145 70 H145" class="line"/>
+    <path d="M-85 112 H205 L240 145 H395" class="line"/>
+    <path d="M-35 128 H155" class="faint"/>
+    <path d="M-15 145 H100 L125 170 H275" class="faint"/>
+
+    <path d="M-42 -2 C-22 -24 22 -24 42 -2 C22 20 -22 20 -42 -2 Z" class="line"/>
+    <circle cx="0" cy="-2" r="16" class="line"/>
+    <circle cx="0" cy="-2" r="5" class="dot"/>
+
+    <path d="M-80 70 V125" class="line"/>
+    <path d="M-55 70 V115" class="faint"/>
+    <path d="M55 70 V110" class="faint"/>
+    <path d="M80 70 V130" class="line"/>
+
+    <path d="M-130 120 H-190 V32" class="line"/>
+    <path d="M-190 32 H-225 V-40" class="faint"/>
+    <circle cx="-190" cy="32" r="4" class="dot"/>
+
+    <circle cx="232" cy="145" r="3" class="dot"/>
+    <circle cx="365" cy="145" r="4" class="line"/>
+  </g>
+
+  <!-- LOWER RIGHT LARGE EYE / COMPASS GLYPH -->
+  <g transform="translate(1630 825)">
+    <circle r="145" class="faint"/>
+    <circle r="112" class="line"/>
+    <circle r="76" class="faint"/>
+    <path d="M0 -80 L58 0 L0 80 L-58 0 Z" class="line"/>
+    <path d="M-48 0 C-24 -34 24 -34 48 0 C24 34 -24 34 -48 0 Z" class="line"/>
+    <circle r="22" class="faint"/>
+    <circle r="5" class="dot"/>
+
+    <circle cx="0" cy="-112" r="4" class="dot"/>
+    <circle cx="112" cy="0" r="4" class="dot"/>
+    <circle cx="0" cy="112" r="4" class="dot"/>
+    <circle cx="-112" cy="0" r="4" class="dot"/>
+
+    <path d="M-145 0 H-105" class="faint"/>
+    <path d="M105 0 H145" class="faint"/>
+    <path d="M0 -145 V-105" class="faint"/>
+    <path d="M0 105 V145" class="faint"/>
+
+    <path d="M-178 80 H-230 V132" class="line"/>
+    <circle cx="-230" cy="132" r="4" class="dot"/>
+    <path d="M145 90 H245 L278 122" class="line"/>
+    <circle cx="245" cy="90" r="4" class="line"/>
+  </g>
+
+  <!-- BOTTOM EDGE CIRCUITS -->
+  <g>
+    <path d="M430 1015 H570 L600 985 H700" class="line"/>
+    <circle cx="610" cy="985" r="4" class="dot"/>
+    <path d="M720 985 H795" class="faint dash"/>
+
+    <path d="M1160 1012 H1315 L1345 982 H1455" class="line"/>
+    <circle cx="1305" cy="1012" r="4" class="line"/>
+    <path d="M1468 982 H1610 L1640 1012 H1770" class="faint"/>
+    <circle cx="1770" cy="1012" r="5" class="line"/>
+
+    <g transform="translate(960 1005)">
+      <circle r="24" class="faint"/>
+      <circle r="7" class="dot"/>
+      <path d="M0 -56 L-8 -42 H8 Z" class="line"/>
+      <path d="M-90 0 H-48" class="faint dash"/>
+      <path d="M48 0 H90" class="faint dash"/>
+      <path d="M-140 -18 H-112" class="line"/>
+      <path d="M112 -18 H140" class="line"/>
+    </g>
+  </g>
+
+  <!-- SMALL FLOATING MARKS -->
+  <g>
+    <path d="M425 180 H455" class="faint"/>
+    <path d="M420 192 H470" class="faint"/>
+    <path d="M415 204 H445" class="faint"/>
+
+    <path d="M1450 350 H1478" class="faint"/>
+    <path d="M1464 336 V364" class="faint"/>
+
+    <path d="M1510 675 H1540" class="faint"/>
+    <path d="M1515 690 H1550" class="faint"/>
+    <path d="M1525 705 H1565" class="faint"/>
+
+    <circle cx="415" cy="162" r="3" class="dot"/>
+    <circle cx="1530" cy="245" r="3" class="dot"/>
+    <circle cx="1435" cy="420" r="2.5" class="dot"/>
+    <circle cx="1485" cy="700" r="2.5" class="dot"/>
+
+    <path d="M248 386 H290" class="faint dash"/>
+    <path d="M302 386 H350" class="faint"/>
+    <circle cx="358" cy="386" r="3" class="dot"/>
+
+    <path d="M250 955 H380" class="faint"/>
+    <path d="M390 955 H440" class="faint dash"/>
+
+    <path d="M1350 905 H1395" class="faint dash"/>
+    <path d="M1410 905 H1470" class="faint"/>
+  </g>
+
+  <!-- DOT ROWS -->
+  <g>
+    <circle cx="250" cy="390" r="2.5" class="dot"/>
+    <circle cx="268" cy="390" r="2.5" class="dot"/>
+    <circle cx="286" cy="390" r="2.5" class="dot"/>
+
+    <circle cx="650" cy="1018" r="2.5" class="dot"/>
+    <circle cx="670" cy="1018" r="2.5" class="dot"/>
+    <circle cx="690" cy="1018" r="2.5" class="dot"/>
+
+    <circle cx="1510" cy="300" r="2.5" class="dot"/>
+    <circle cx="1530" cy="300" r="2.5" class="dot"/>
+    <circle cx="1550" cy="300" r="2.5" class="dot"/>
+    <circle cx="1570" cy="300" r="2.5" class="dot"/>
+
+    <circle cx="1685" cy="1010" r="2.5" class="dot"/>
+    <circle cx="1705" cy="1010" r="2.5" class="dot"/>
+    <circle cx="1725" cy="1010" r="2.5" class="dot"/>
+  </g>
+
+  <!-- SUBTLE BORDER TRACE -->
+  <path
+    d="M32 1010 V860 L65 827 V665 M32 252 V460 L64 492 V610"
+    class="faint"
+  />
+
+  <path
+    d="M1888 40 V260 L1850 298 V498 M1888 560 V735 L1850 773 V985"
+    class="faint"
+  />
+</svg>

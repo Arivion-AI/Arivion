@@ -1,0 +1,35 @@
+<svg width="900" height="1260" viewBox="0 0 900 1260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="core" cx="58%" cy="40%" r="64%">
+      <stop offset="0" stop-color="#f4fbff" stop-opacity="0.68"/>
+      <stop offset="0.26" stop-color="#bd7cff" stop-opacity="0.5"/>
+      <stop offset="0.58" stop-color="#182049" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#030309"/>
+    </radialGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="0.25" stop-color="#51efff" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#a855f7" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#111827" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="20"/></filter>
+  </defs>
+  <rect width="900" height="1260" fill="url(#core)"/>
+  <g opacity="0.34" filter="url(#blur)">
+    <ellipse cx="485" cy="455" rx="310" ry="132" fill="#9b5cff"/>
+    <ellipse cx="530" cy="765" rx="240" ry="96" fill="#48f4ff"/>
+  </g>
+  <g opacity="0.56" fill="none" stroke="url(#chrome)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M170 350 L445 210 L720 350 L720 672 L445 824 L170 672 Z"/>
+    <path d="M258 402 L445 308 L632 402 L632 620 L445 722 L258 620 Z" opacity="0.58"/>
+    <path d="M445 210 V824 M170 350 L720 672 M720 350 L170 672" opacity="0.38"/>
+  </g>
+  <g opacity="0.18" stroke="#fff" stroke-width="2">
+    <circle cx="450" cy="620" r="330" fill="none"/>
+    <circle cx="450" cy="620" r="245" fill="none"/>
+    <circle cx="450" cy="620" r="155" fill="none"/>
+  </g>
+  <g opacity="0.2" fill="#e9fbff">
+    <circle cx="190" cy="238" r="5"/><circle cx="248" cy="1010" r="4"/><circle cx="735" cy="248" r="6"/><circle cx="710" cy="1005" r="4"/><circle cx="550" cy="112" r="3"/><circle cx="360" cy="1160" r="3"/>
+  </g>
+</svg>
