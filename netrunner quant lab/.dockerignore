@@ -1,0 +1,17 @@
+# Never copy host-installed deps into images — each Dockerfile runs its own
+# `pnpm install` in-image. Copying host node_modules shadows that install with
+# stale/dangling pnpm symlinks (e.g. tsx@4.22.3 vs the freshly-resolved 4.22.4),
+# which breaks `tsx`-based runtime CMDs (api, web).
+**/node_modules
+node_modules
+
+# Build artifacts / local cruft — regenerated in-image where needed.
+**/.next
+**/*.tsbuildinfo
+**/.DS_Store
+**/*.log
+.git
+.claude
+.codex
+.cursor
+.vscode
