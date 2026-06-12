@@ -1,0 +1,5 @@
+services:
+  # Host port 8080 is already used by a local nginx; expose the MCP server on 8081 instead.
+  mcp:
+    ports:
+      - "8081:8080"

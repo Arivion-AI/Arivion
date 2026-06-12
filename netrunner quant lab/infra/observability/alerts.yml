@@ -1,0 +1,34 @@
+groups:
+  - name: duality-alerts
+    rules:
+      - alert: RunHashMismatchSpike
+        expr: increase(duality_verifier_run_hash_mismatch_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RUN_HASH_MISMATCH observed"
+
+      - alert: DataStalePauseObserved
+        expr: increase(duality_worker_events_total{event_type="DATA_STALE_PAUSE"}[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DATA_STALE_PAUSE events observed"
+
+      - alert: KillEventsObserved
+        expr: increase(duality_worker_events_total{event_type="KILLED"}[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "KILLED events observed"
+
+      - alert: BackfillQueueFailures
+        expr: increase(duality_backfill_failures_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backfill queue failures observed"

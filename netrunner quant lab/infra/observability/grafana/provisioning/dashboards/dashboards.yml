@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Duality
+    orgId: 1
+    folder: Duality
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards

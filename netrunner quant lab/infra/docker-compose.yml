@@ -1,0 +1,281 @@
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3300:3000"
+    environment:
+      API_URL: http://api:4000
+      PUBLIC_API_URL: http://localhost:4400
+      WEB_PORT: 3000
+    depends_on:
+      api:
+        condition: service_started
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4400:4000"
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      QUANT_WORKER_URL: http://worker:7000
+      DUALITY_VERIFIER_URL: http://verifier:7200
+      DATA_INGESTOR_URL: http://data-ingestor:7100
+      JWT_SECRET: REDACTED_JWT_SECRET
+      ALLOW_DEV_TOKEN: "true"            # DEV ONLY — never set in production
+      INTERNAL_SECRET: REDACTED_INTERNAL_SECRET
+      API_PORT: 4000
+      # §25 Privy — public app id; verification uses the public JWKS (PRIVY_VERIFICATION_KEY left
+      # unset). PRIVY_APP_SECRET is NOT set here (not needed on the verify path).
+      PRIVY_APP_ID: REDACTED_PRIVY_APP_ID
+      # Chain RPC endpoints (interpolated from the lab .env) — used by the chain registry /
+      # chain_health and live wallet-balance reads. Arbitrum One = real-data; Sepolia/RH = testnet.
+      ARBITRUM_ONE_RPC_URL: ${ARBITRUM_ONE_RPC_URL:-}
+      ARBITRUM_ONE_WS_URL: ${ARBITRUM_ONE_WS_URL:-}
+      ARBITRUM_SEPOLIA_RPC_URL: ${ARBITRUM_SEPOLIA_RPC_URL:-https://sepolia-rollup.arbitrum.io/rpc}
+      ARBITRUM_SEPOLIA_WS_URL: ${ARBITRUM_SEPOLIA_WS_URL:-}
+      ROBINHOOD_TESTNET_RPC_URL: ${ROBINHOOD_TESTNET_RPC_URL:-https://rpc.testnet.chain.robinhood.com}
+      ROBINHOOD_TESTNET_ALCHEMY_RPC_URL: ${ROBINHOOD_TESTNET_ALCHEMY_RPC_URL:-}
+      ROBINHOOD_TESTNET_WS_URL: ${ROBINHOOD_TESTNET_WS_URL:-wss://feed.testnet.chain.robinhood.com}
+      # Agent on-chain execution (TESTNET ONLY) — backend agent wallet + stock vault.
+      DUALITY_ENABLE_TESTNET_ACTIONS: ${DUALITY_ENABLE_TESTNET_ACTIONS:-false}
+      # GMX live trading (Arbitrum One). Disabled by default; set both to enable real submissions.
+      DUALITY_ENABLE_REAL_TRADER: ${DUALITY_ENABLE_REAL_TRADER:-false}
+      AGENT_GMX_PRIVATE_KEY: ${AGENT_GMX_PRIVATE_KEY:-}
+      GMX_MAX_COLLATERAL_USD: ${GMX_MAX_COLLATERAL_USD:-250}
+      GMX_MAX_LEVERAGE: ${GMX_MAX_LEVERAGE:-3}
+      GMX_REFERRAL_CODE: ${GMX_REFERRAL_CODE:-}
+      GMX_UI_FEE_RECEIVER: ${GMX_UI_FEE_RECEIVER:-}
+      DEPLOY_PRIVATE_KEY: ${DEPLOY_PRIVATE_KEY:-}
+      DUALITY_STOCK_VAULT_ADDRESS: ${DUALITY_STOCK_VAULT_ADDRESS:-}
+      DUALITY_MOCK_USDG_ADDRESS: ${DUALITY_MOCK_USDG_ADDRESS:-}
+      DUALITY_STOCK_TOKENS: ${DUALITY_STOCK_TOKENS:-}
+      AGENT_MAX_BUY_USDG: ${AGENT_MAX_BUY_USDG:-2000}
+      AGENT_WALLET_MASTER_KEY: ${AGENT_WALLET_MASTER_KEY:-REDACTED_AGENT_WALLET_MASTER_KEY}
+      AGENT_GAS_TOPUP_ETH: ${AGENT_GAS_TOPUP_ETH:-0.004}
+      DUALITY_AMM_ADDRESS: ${DUALITY_AMM_ADDRESS:-}
+      DUALITY_AMM_TOKEN0: ${DUALITY_AMM_TOKEN0:-}
+      DUALITY_AMM_TOKEN1: ${DUALITY_AMM_TOKEN1:-}
+      DUALITY_AMM_PRICE: ${DUALITY_AMM_PRICE:-3000}
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      INTERNAL_SECRET: REDACTED_INTERNAL_SECRET
+      HEAVY_CONCURRENCY: "4"            # sane default; 1 py process ≈ 1 core (use a pool to scale)
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  data-ingestor:
+    build:
+      context: ..
+      dockerfile: apps/data-ingestor/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      BYBIT_BASE_URL: https://api.bybit.com
+      BYBIT_WS_PUBLIC_LINEAR: wss://stream.bybit.com/v5/public/linear
+      # DEX data lane — GeckoTerminal is the live source today; RPC + Uniswap/Graph keys are
+      # reserved for the raw RPC/subgraph augmentation path.
+      GECKOTERMINAL_API_BASE: ${GECKOTERMINAL_API_BASE:-https://api.geckoterminal.com/api/v2}
+      COINGECKO_API_BASE: ${COINGECKO_API_BASE:-https://api.coingecko.com/api/v3}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      GECKOTERMINAL_RPM: ${GECKOTERMINAL_RPM:-25}
+      COINGECKO_RPM: ${COINGECKO_RPM:-10}
+      COINGECKO_MONTHLY_CAP: ${COINGECKO_MONTHLY_CAP:-10000}
+      THEGRAPH_RPM: ${THEGRAPH_RPM:-30}
+      ARBITRUM_ONE_RPC_URL: ${ARBITRUM_ONE_RPC_URL:-}
+      ARBITRUM_ONE_WS_URL: ${ARBITRUM_ONE_WS_URL:-}
+      ROBINHOOD_TESTNET_RPC_URL: ${ROBINHOOD_TESTNET_RPC_URL:-}
+      UNISWAP_API_KEY: ${UNISWAP_API_KEY:-}
+      THEGRAPH_API_KEY: ${THEGRAPH_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  verifier:
+    build:
+      context: ..
+      dockerfile: apps/verifier/Dockerfile
+    ports:
+      - "7200:7200"
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      VERIFIER_SIGNING_KEY: REDACTED_VERIFIER_SIGNING_KEY
+    depends_on:
+      postgres:
+        condition: service_started
+
+  sandbox-runner:
+    build:
+      context: ..
+      dockerfile: apps/sandbox-runner/Dockerfile
+    ports:
+      - "7300:7300"
+    environment:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    read_only: true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  mcp:
+    build:
+      context: ..
+      dockerfile: apps/mcp/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DUALITY_TRANSPORT: http
+      DUALITY_HTTP_PORT: "8080"
+      DUALITY_API_URL: http://api:4000
+      DUALITY_VERIFIER_URL: http://verifier:7200
+      DUALITY_INGESTOR_URL: http://data-ingestor:7100
+      DUALITY_SANDBOX_URL: http://sandbox-runner:7300
+      # passthrough = multi-tenant: the MCP server uses the CALLER's owner token
+      # (the agent forwards each owner's HS256 JWT via Authorization), so Lab
+      # mutations land under the REAL owner — not a single shared dev identity.
+      # (dev-token mints owner JWTs for DUALITY_DEFAULT_OWNER_ID on every call;
+      # configured uses one pre-minted DUALITY_API_TOKEN.)
+      DUALITY_AUTH_MODE: passthrough
+      DUALITY_DEFAULT_OWNER_ID: "1"
+      INTERNAL_SECRET: REDACTED_INTERNAL_SECRET
+      # Expose verifier/ingestor/sandbox tools too.
+      DUALITY_ENABLE_INTERNAL: "true"
+    depends_on:
+      api:
+        condition: service_started
+
+  # Duality Copilot agent service (LLM Gateway + managed credits + Copilot routes). Shares the DB
+  # with the api (api owns migrations) and verifies the same HS256 owner token (JWT_SECRET match).
+  agent:
+    build:
+      context: ..
+      dockerfile: apps/agent/Dockerfile
+    ports:
+      - "4500:4500"
+    environment:
+      AGENT_PORT: "4500"
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      MCP_SERVER_URL: http://mcp:8080
+      NETRUNNERS_API_URL: http://api:4000
+      JWT_SECRET: REDACTED_JWT_SECRET
+      COPILOT_WELCOME_CREDIT_USD: "2.00"
+      COPILOT_WELCOME_CREDIT_EXPIRES_DAYS: "30"
+      COPILOT_MAX_COST_PER_RUN_USD: "1.00"
+      COPILOT_MAX_COST_PER_STEP_USD: "0.50"
+      COPILOT_MAX_COST_PER_DAY_USD: "5.00"
+      COPILOT_MAX_OUTPUT_TOKENS_PER_STEP: "4096"
+      COPILOT_MAX_MODEL_CONTEXT_TOKENS: "200000"
+      # BYOK stays OFF until KMS exists (correction #2). Fingerprint secret is dev-only here.
+      COPILOT_BYOK_ENABLED: "false"
+      COPILOT_KEY_FINGERPRINT_SECRET: REDACTED_COPILOT_KEY_FINGERPRINT_SECRET
+      # Phase 8 — dev admin (owner 3 is the dev-token owner) for the admin budget dashboard.
+      COPILOT_ADMIN_OWNER_IDS: "3"
+      # Managed provider keys — supply OPENAI_API_KEY / ANTHROPIC_API_KEY to enable real models.
+      # Sourced from the lab .env (key is stored there as OPENAI_API) via compose interpolation.
+      OPENAI_API_KEY: ${OPENAI_API:-}
+      # ANTHROPIC_API_KEY: ""
+      # On-chain data brain (GMX REST + Uniswap subgraph + Dune). Read-only / paper-sim only.
+      DUNE_API_KEY: ${DUNE_API_KEY:-}
+      DUNE_QUERY_UNI_POOL_OVERVIEW: ${DUNE_QUERY_UNI_POOL_OVERVIEW:-}
+      DUNE_QUERY_UNI_POOL_HISTORY: ${DUNE_QUERY_UNI_POOL_HISTORY:-}
+      DUNE_QUERY_UNI_TOKEN_POOLS: ${DUNE_QUERY_UNI_TOKEN_POOLS:-}
+      DUNE_QUERY_GMX_MARKET_STATS: ${DUNE_QUERY_GMX_MARKET_STATS:-}
+      DUNE_QUERY_GMX_GLV_BREAKDOWN: ${DUNE_QUERY_GMX_GLV_BREAKDOWN:-}
+      DUNE_QUERY_GMX_FUNDING_HISTORY: ${DUNE_QUERY_GMX_FUNDING_HISTORY:-}
+      DUNE_QUERY_TOKEN_HOLDER_FLOW: ${DUNE_QUERY_TOKEN_HOLDER_FLOW:-}
+      DUNE_QUERY_ARB_GAS_STATS: ${DUNE_QUERY_ARB_GAS_STATS:-}
+      GMX_API_BASE: ${GMX_API_BASE:-https://arbitrum-api.gmxinfra.io}
+      UNISWAP_SUBGRAPH_URL: ${UNISWAP_SUBGRAPH_URL:-}
+      THEGRAPH_API_KEY: ${THEGRAPH_API_KEY:-}
+      DUNE_CACHE_TTL_SECONDS: ${DUNE_CACHE_TTL_SECONDS:-900}
+      DUNE_EXEC_TIMEOUT_SECONDS: ${DUNE_EXEC_TIMEOUT_SECONDS:-55}
+      DUNE_MAX_ROWS: ${DUNE_MAX_ROWS:-200}
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      mcp:
+        condition: service_started
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: duality
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: duality
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      api:
+        condition: service_started
+      worker:
+        condition: service_started
+      verifier:
+        condition: service_started
+      data-ingestor:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:

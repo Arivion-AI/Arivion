@@ -1,0 +1,51 @@
+{
+  "title": "Duality Ops",
+  "uid": "duality-ops",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Worker Events by Type",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum by (event_type) (rate(duality_worker_events_total[5m]))", "legendFormat": "{{event_type}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Runs by Tier",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum by (kind,tier) (increase(duality_worker_runs_total[1h]))", "legendFormat": "{{kind}}/{{tier}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Fill Latency p50/p99 (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(duality_worker_fill_latency_ms_bucket[5m])) by (le))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.99, sum(rate(duality_worker_fill_latency_ms_bucket[5m])) by (le))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Verifier Mismatches",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "increase(duality_verifier_run_hash_mismatch_total[1h])", "legendFormat": "run_hash_mismatch" },
+        { "expr": "increase(duality_verifier_local_summary_mismatch_total[1h])", "legendFormat": "local_summary_mismatch" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Backfill Queue Depth",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "duality_backfill_queue_depth", "legendFormat": "{{queue}}/{{state}}" }
+      ]
+    }
+  ]
+}
