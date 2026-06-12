@@ -1,0 +1,2653 @@
+{
+  "startedAt": "2026-05-28T09:26:43.026Z",
+  "api": "http://localhost:4400",
+  "ownerId": 777,
+  "strategyTests": [
+    {
+      "strategyId": "pmm",
+      "scenario": "trend_up",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10205.63581736015200",
+        "totalEvents": 1197,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "bc39aabd-eb46-4251-9c27-d5e822523a44",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004618523638726108,
+          "sharpe": -0.0009237047277452216,
+          "calmar": -0.04618523638726108,
+          "max_drawdown": 0.0002309261819363054,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "pmm",
+      "scenario": "crash_rebound",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10025.4755941372216",
+        "totalEvents": 1197,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "1f5fad93-0ad0-4a8a-bc43-0cf5df0e281d",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.00038993594325764745,
+          "sharpe": -0.0007798718865152949,
+          "calmar": -0.03899359432576474,
+          "max_drawdown": 0.00019496797162882372,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "pmm",
+      "scenario": "chop",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10204.24989743782668799999998",
+        "totalEvents": 1140,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "244510dd-8f81-42f5-8937-0be6a998ee0c",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004207103953702434,
+          "sharpe": -0.0008414207907404868,
+          "calmar": -0.04207103953702434,
+          "max_drawdown": 0.0002103551976851217,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "avellaneda_stoikov",
+      "scenario": "trend_up",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10009.5062864102389151665",
+        "totalEvents": 1177,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "82710001-c499-489e-aac3-2c24d318c4ba",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004618523638726108,
+          "sharpe": -0.0009237047277452216,
+          "calmar": -0.04618523638726108,
+          "max_drawdown": 0.0002309261819363054,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "avellaneda_stoikov",
+      "scenario": "crash_rebound",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "9999.999999999999260106",
+        "totalEvents": 1177,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "d2aa3e83-3a92-4294-affd-0973fbe0cdde",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.00038993594325764745,
+          "sharpe": -0.0007798718865152949,
+          "calmar": -0.03899359432576474,
+          "max_drawdown": 0.00019496797162882372,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "avellaneda_stoikov",
+      "scenario": "chop",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10312.14496750813735961100000",
+        "totalEvents": 1041,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "556c1cae-f773-4505-9889-4b9928e3a207",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004207103953702434,
+          "sharpe": -0.0008414207907404868,
+          "calmar": -0.04207103953702434,
+          "max_drawdown": 0.0002103551976851217,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "funding_fade",
+      "scenario": "trend_up",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10078.39611633814397069126647",
+        "totalEvents": 30,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "ea6bd33f-fd03-46cd-a676-c9091595eb83",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004618523638726108,
+          "sharpe": -0.0009237047277452216,
+          "calmar": -0.04618523638726108,
+          "max_drawdown": 0.0002309261819363054,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "funding_fade",
+      "scenario": "crash_rebound",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10000",
+        "totalEvents": 153,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "d941051e-e768-4b24-ac11-42d7acd9f211",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.00038993594325764745,
+          "sharpe": -0.0007798718865152949,
+          "calmar": -0.03899359432576474,
+          "max_drawdown": 0.00019496797162882372,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "funding_fade",
+      "scenario": "chop",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "9825.507397904487001724592262",
+        "totalEvents": 18,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "d39a2c95-1bfa-4afe-8ec6-21ad9e7232f6",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004207103953702434,
+          "sharpe": -0.0008414207907404868,
+          "calmar": -0.04207103953702434,
+          "max_drawdown": 0.0002103551976851217,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "trend_ema_cross",
+      "scenario": "trend_up",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "11171.23141402485",
+        "totalEvents": 9,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "acb07756-dc98-4aad-a1be-95beb61f1eb1",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004618523638726108,
+          "sharpe": -0.0009237047277452216,
+          "calmar": -0.04618523638726108,
+          "max_drawdown": 0.0002309261819363054,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "trend_ema_cross",
+      "scenario": "crash_rebound",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10000",
+        "totalEvents": 4,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "7a655d8f-690f-4cea-9151-a2b5e0d2cc24",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.00038993594325764745,
+          "sharpe": -0.0007798718865152949,
+          "calmar": -0.03899359432576474,
+          "max_drawdown": 0.00019496797162882372,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "trend_ema_cross",
+      "scenario": "chop",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "9573.940238370318404432792326",
+        "totalEvents": 41,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "373308f4-75b9-47a0-b067-02863510ba7f",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004207103953702434,
+          "sharpe": -0.0008414207907404868,
+          "calmar": -0.04207103953702434,
+          "max_drawdown": 0.0002103551976851217,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "grid",
+      "scenario": "trend_up",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "7739.766508960000000000000001",
+        "totalEvents": 4827,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "a5b876cc-8e7c-4379-953d-c0ba00910817",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004618523638726108,
+          "sharpe": -0.0009237047277452216,
+          "calmar": -0.04618523638726108,
+          "max_drawdown": 0.0002309261819363054,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "grid",
+      "scenario": "crash_rebound",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10434.55497707239999999999999",
+        "totalEvents": 6758,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "0db2c254-e491-40da-a154-a4c021457536",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.00038993594325764745,
+          "sharpe": -0.0007798718865152949,
+          "calmar": -0.03899359432576474,
+          "max_drawdown": 0.00019496797162882372,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "grid",
+      "scenario": "chop",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "9934.01952186720000000000000",
+        "totalEvents": 2931,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "9d057150-c9c3-45a3-a2bf-bec67750f9c1",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004207103953702434,
+          "sharpe": -0.0008414207907404868,
+          "calmar": -0.04207103953702434,
+          "max_drawdown": 0.0002103551976851217,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "twap",
+      "scenario": "trend_up",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "11696.07500379711875",
+        "totalEvents": 33,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "2bebcf30-e4e9-4307-a317-dd793413ff63",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004618523638726108,
+          "sharpe": -0.0009237047277452216,
+          "calmar": -0.04618523638726108,
+          "max_drawdown": 0.0002309261819363054,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "twap",
+      "scenario": "crash_rebound",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "10000",
+        "totalEvents": 12,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "9df852e5-ecc3-4aa5-b2ff-111cb52769ef",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.00038993594325764745,
+          "sharpe": -0.0007798718865152949,
+          "calmar": -0.03899359432576474,
+          "max_drawdown": 0.00019496797162882372,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    },
+    {
+      "strategyId": "twap",
+      "scenario": "chop",
+      "paper": {
+        "ok": true,
+        "status": 200,
+        "finalEquity": "9891.174797476868333333333333",
+        "totalEvents": 63,
+        "killed": false
+      },
+      "backtest": {
+        "ok": true,
+        "status": 200,
+        "runId": "067067b3-ca4d-4e40-8a2f-4eddbe25535e",
+        "resultTier": "LOCAL ONLY",
+        "metrics": {
+          "fills_count": 1,
+          "funding_events_count": 7,
+          "events_count": 9,
+          "total_return_after_fees_funding": -0.0004207103953702434,
+          "sharpe": -0.0008414207907404868,
+          "calmar": -0.04207103953702434,
+          "max_drawdown": 0.0002103551976851217,
+          "consistency": 0.5,
+          "robustness": 0.5,
+          "live_paper_score": 0,
+          "liquidation_events": 0,
+          "data_coverage_complete": true,
+          "overfit_penalty": 0,
+          "approximate_fills": false
+        }
+      }
+    }
+  ],
+  "botTests": [
+    {
+      "botType": "spot_grid",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_3e8fa017-22b7-45df-ab28-ddfb6bfecf3f"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_267b4745-b020-42fe-998a-949de462210e",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "51b3473601808adbe8cf66bdbb33540d711aeab9745bb4008e2c6edf86ee88e8",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_4b54201d-8e05-48cb-9236-265627a51a76",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "51b3473601808adbe8cf66bdbb33540d711aeab9745bb4008e2c6edf86ee88e8",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      }
+    },
+    {
+      "botType": "spot_grid",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_d98fe4e5-972e-443d-8971-9d6b2120ca3c"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_d88db1fd-10ee-4e56-b909-e55c96d7302f",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "98121b938fc9faec828f6e63ecb1c763eaf17694ecf399fd6251c7b4898d22c0",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_e4684468-03ea-4adc-a5e9-5d5f4cf18567",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "98121b938fc9faec828f6e63ecb1c763eaf17694ecf399fd6251c7b4898d22c0",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_grid",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_68d7f869-d308-4aa9-90f9-7f87ea5d5a0b"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "MARGIN_TIERS_MISSING"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS",
+          "APPROXIMATE_LIQUIDATION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": [
+          "FUTURES_LEVERAGE_WITHOUT_MARGIN_TIERS"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_56281154-5b55-40ae-aac5-688bb73be6be",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "7d22ef9e51ce60e143bfe6a2d679788663c1a8015670d333db0f166cdf6459b9",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_d2cfb248-759e-4f38-bb5c-140c8bc7f97f",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "7d22ef9e51ce60e143bfe6a2d679788663c1a8015670d333db0f166cdf6459b9",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_grid",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_5c1071d1-6b06-45fd-98e7-c3277a5b0d45"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": false,
+        "errors": [
+          "FUNDING_COVERAGE_REQUIRED"
+        ],
+        "warnings": [
+          "MARGIN_TIERS_MISSING"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS",
+          "APPROXIMATE_LIQUIDATION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": [
+          "FUTURES_LEVERAGE_WITHOUT_MARGIN_TIERS"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_18207444-5a6f-4639-b3bd-75d6148af113",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "0795538b741e35ecca314e7107183b4234e77d3986fcffb17fbf460aae128e70",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_d7301d52-8aff-43d5-b759-d99c948a6597",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "0795538b741e35ecca314e7107183b4234e77d3986fcffb17fbf460aae128e70",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "dca",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_d3334747-9c7b-4dec-93aa-2bdf4463cff3"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_759fcecd-4fe5-4b16-a27b-bc5a57367155",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "91b09deb516dc1dea929b33f732786f489f71cb8ed0b86ae936208de30cce0b7",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_30982fff-3cc1-4b47-a1f7-a95b54052485",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "91b09deb516dc1dea929b33f732786f489f71cb8ed0b86ae936208de30cce0b7",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      }
+    },
+    {
+      "botType": "dca",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_bf226fb7-eb76-4bae-af05-1aaf504c8443"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_a919d6b7-c2ba-4d37-8f75-061635c28f37",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "f1ca8b24c3fb1957cfca8f7a6feeaa0ce3cbf5bd7afdd500c6aedc3354a3a6d9",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_dbdce649-3ec1-4981-8e76-d105b5a4e9bd",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "f1ca8b24c3fb1957cfca8f7a6feeaa0ce3cbf5bd7afdd500c6aedc3354a3a6d9",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_dca",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_43900896-57a6-425a-9d95-d9bb61413323"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_c0c4f69d-ff98-4909-8eeb-bf44765f0728",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "b2def10d03714cde5f53cacf0f3c2a29cbfea1a2d566e0bd1f6bb8691f961a96",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_4ccd5db5-4b3c-434b-a23a-85bb2d2300d3",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "b2def10d03714cde5f53cacf0f3c2a29cbfea1a2d566e0bd1f6bb8691f961a96",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_dca",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_2cf81587-ecf4-42b6-939b-3999189ec344"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_1b707e6d-8d50-452d-9aca-adf1001511f0",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "db0e74d3abee069ab3c477504be8be662211fbcf90da6275ba41ec6a1760ee07",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_db19cd7a-7800-4a7d-9ffd-b9864332c141",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "db0e74d3abee069ab3c477504be8be662211fbcf90da6275ba41ec6a1760ee07",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_martingale",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_521a75de-a631-4f67-9edf-ec325ed598d6"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "APPROXIMATE_FILLS",
+          "APPROXIMATE_LIQUIDATION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": [
+          "FUTURES_LEVERAGE_WITHOUT_MARGIN_TIERS"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_268b18e9-d6e2-408d-b437-1afa87f93921",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "VERY_HIGH",
+          "spec_hash": "94efe326a24a0d50ee04bd1b6053ecc140cd84de2604d5a0dbca541c991c2cd2",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_92fdc91e-6e54-471c-a76f-4f74fce5039d",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "VERY_HIGH",
+          "spec_hash": "94efe326a24a0d50ee04bd1b6053ecc140cd84de2604d5a0dbca541c991c2cd2",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_martingale",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_33984e43-b26d-420a-88b4-ab76a4658125"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "MULTIPLIER_HIGH"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS",
+          "APPROXIMATE_LIQUIDATION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": [
+          "FUTURES_LEVERAGE_WITHOUT_MARGIN_TIERS"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_3c4be8ed-6ab4-4d38-87ca-d3451f164fad",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "MULTIPLIER_HIGH"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "VERY_HIGH",
+          "spec_hash": "b484465b47cfd9bce4ad14fdd71470f9049ac7503e2120020211bc24b7f7ab3c",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_e78b350b-ffd1-4a34-b010-3a0428b7cbc1",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "MULTIPLIER_HIGH"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_LIQUIDATION"
+          ],
+          "risk_class": "VERY_HIGH",
+          "spec_hash": "b484465b47cfd9bce4ad14fdd71470f9049ac7503e2120020211bc24b7f7ab3c",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_combo",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_0d58267a-db85-433a-bb93-a451f56f3188"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "SUBJECT_TO_RETENTION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_b54db680-2644-40e5-a73b-e3f0be932055",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "8634fd97e167a9aaee893b2c935e4c92ed8b6c3d2e479856a561e37e16bd6b69",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_e827561f-6a2a-4656-9786-067918e3069a",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "8634fd97e167a9aaee893b2c935e4c92ed8b6c3d2e479856a561e37e16bd6b69",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "futures_combo",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_d968f8a8-b68d-40ea-b256-decdd0483473"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "SUBJECT_TO_RETENTION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_ba7e4c54-455a-40ff-b880-653bb2d29c87",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "535f1fc6e01d5845ea5186b4a266428f84478d3b04ddc3844189bb57da515a0a",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_8a468795-ad2c-49a8-a1f3-efa65c2d0456",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "535f1fc6e01d5845ea5186b4a266428f84478d3b04ddc3844189bb57da515a0a",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "rebalancer",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_d664d20a-9109-44f6-8b82-5e86f1421df0"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "SUBJECT_TO_RETENTION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_46d59a2d-233d-48c6-8909-a264a14a94b3",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "4bda0583328ce45b0443a8fa5fc70603383bbe7416e3cabd71624a8d1ecce4dc",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_2b5ac120-e044-49c7-9139-eca11531e10e",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "4bda0583328ce45b0443a8fa5fc70603383bbe7416e3cabd71624a8d1ecce4dc",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      }
+    },
+    {
+      "botType": "rebalancer",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_a1eddeb3-c665-40a3-b3b6-e27c845c399e"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "SUBJECT_TO_RETENTION"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_5b86b10d-e1c2-4aa4-adb1-e400a1341edc",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "55a7159b4ff1ba2cd67ceed08a06697ec15c800366f5c83ebd485a6573edcc3d",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_53ca6c38-3153-4f3c-8c16-d03bfbae29c3",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "SUBJECT_TO_RETENTION"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "55a7159b4ff1ba2cd67ceed08a06697ec15c800366f5c83ebd485a6573edcc3d",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED"
+          }
+        }
+      }
+    },
+    {
+      "botType": "funding_arbitrage",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_e4b1f1b8-de86-488f-b8c1-84409ed547f7"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": [
+          "APPROXIMATE_FILLS",
+          "APPROXIMATE_REVERSE_CARRY_BLOCKED",
+          "PAPER_ONLY_LIVE"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_9adef452-f1e3-449a-8d98-3db692e315bf",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_REVERSE_CARRY_BLOCKED",
+            "PAPER_ONLY_LIVE"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "0e81acb217606ab5c0c87b28d787c105206d91de7863314d4cfa991d0c7b6265",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_b94183ec-3d5b-482b-8c0f-4259679d8088",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_REVERSE_CARRY_BLOCKED",
+            "PAPER_ONLY_LIVE"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "0e81acb217606ab5c0c87b28d787c105206d91de7863314d4cfa991d0c7b6265",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "funding_arbitrage",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_8e873bf6-ca20-408c-bb98-eff5acb8bece"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": false,
+        "errors": [
+          "FUNDING_COVERAGE_REQUIRED"
+        ],
+        "warnings": [],
+        "labels": [
+          "APPROXIMATE_FILLS",
+          "APPROXIMATE_REVERSE_CARRY_BLOCKED",
+          "PAPER_ONLY_LIVE"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_cad45916-7b6a-4e8c-946f-3a402b6a91da",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_REVERSE_CARRY_BLOCKED",
+            "PAPER_ONLY_LIVE"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "9048a4fd0622ddabfeffc42a28ff5f9da826e97457fdb3b0a01c8dabf200b727",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_035be7ed-c38b-4bb0-98a1-a7790699f3e7",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS",
+            "APPROXIMATE_REVERSE_CARRY_BLOCKED",
+            "PAPER_ONLY_LIVE"
+          ],
+          "risk_class": "HIGH",
+          "spec_hash": "9048a4fd0622ddabfeffc42a28ff5f9da826e97457fdb3b0a01c8dabf200b727",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "twap",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_6c7d5636-ad8a-41a9-82be-d71664a9bce3"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": [
+          "E0_VERIFIED_EXECUTION_REQUIRES_L1_L2"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_39c37254-4a18-4e06-9e24-3a7edc0ba6fd",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "56330cb5be01d8fd06bfd530c191a70c33a4602a0f5e7ee8288a920b1ef3b0c1",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_271cdb8d-3806-4102-ac3a-c8b74aa221ab",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "56330cb5be01d8fd06bfd530c191a70c33a4602a0f5e7ee8288a920b1ef3b0c1",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "twap",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_7a076437-5c6d-4fb8-9305-f9aea3bd6e0a"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_3bda3a30-9ae3-4dc1-b227-d8be6a5c2991",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "b7b3e365b1204b3418f9a8f56017f8926252f79c0cc66337cee276335f11836f",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_38120123-e32a-4755-b379-6ce9b260823a",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "b7b3e365b1204b3418f9a8f56017f8926252f79c0cc66337cee276335f11836f",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "vp_pov",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_b74f61bb-c3f3-4054-9559-54b278267b88"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": [
+          "E0_VERIFIED_EXECUTION_REQUIRES_L1_L2"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_492d9026-deb8-48d2-bd33-74fb226dde89",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "d23ff41464283981713c12f0ac0cee289de587a363099b281ff059e88f452b87",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_0dc31727-2b72-47b7-a1a6-6236d049903e",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "d23ff41464283981713c12f0ac0cee289de587a363099b281ff059e88f452b87",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "vp_pov",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_902311c5-665e-4dc8-9fc9-7fea100e2c8d"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_618e4812-ad2d-4dbc-9c44-6294a7c74764",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "eb4fd6061def5281127da7fdd6402d27984a2ab4489366b7d20c1057afe21db7",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_8600a918-daa2-40ad-8347-70d2e170d0d2",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "eb4fd6061def5281127da7fdd6402d27984a2ab4489366b7d20c1057afe21db7",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "chase_limit",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_79e10c5a-6b74-4bca-b55f-3ca4f30f7bb2"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": [
+          "E0_VERIFIED_EXECUTION_REQUIRES_L1_L2"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_62fa75c4-c2e9-4ae7-9825-3bec51d08b63",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "8b2a2dd9f53c4d86933121757e6c745d3fe4389b5071b96b22be83c5a2292bfd",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_b00d0e6a-7b95-44b4-94de-e26a325efaf0",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "8b2a2dd9f53c4d86933121757e6c745d3fe4389b5071b96b22be83c5a2292bfd",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "chase_limit",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_8ad43b4f-38b4-4697-aff5-a6df37392659"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_a8ee7027-c04d-4b67-8fa0-b8859e48fb49",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "40b5aafe6fa0dc81787291d47662e711f6efee96a4620f1dc3869fc390449c0c",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_69d2c810-97fe-4b0e-9405-856290c388dc",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "40b5aafe6fa0dc81787291d47662e711f6efee96a4620f1dc3869fc390449c0c",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "iceberg",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_4fd62bdb-a92d-4b20-8ad7-b6adf675bebd"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": [
+          "E0_VERIFIED_EXECUTION_REQUIRES_L1_L2"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_53c5ddcf-8a80-4e2b-a8f4-76520cdf7fd4",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "f452601c4cc238e647fecd568359f00ad459d43de4c6bdd8482d6b7189d61c69",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_ebacaaed-b2ea-4f57-9b8b-3672e10edf45",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "f452601c4cc238e647fecd568359f00ad459d43de4c6bdd8482d6b7189d61c69",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "iceberg",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_57d5f3a6-cd04-4103-9eaf-517a6a8ab7e3"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_f8b18268-663c-4fe3-ab20-6cc1be39bab3",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "25fb88b9df1886a2d1dfa979e978000c258046072f516fadecca2571209f9f0d",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_0be67642-6b21-4d0b-840e-fe1b8fa6a178",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "25fb88b9df1886a2d1dfa979e978000c258046072f516fadecca2571209f9f0d",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "scaled_order",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_c0366e23-0cf2-4e60-a895-4f162a1aa690"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+        ],
+        "labels": [
+          "APPROXIMATE_FILLS"
+        ]
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": [
+          "E0_VERIFIED_EXECUTION_REQUIRES_L1_L2"
+        ]
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_88480f37-1b17-4b4b-8d5d-75b905b3cb00",
+        "resultTier": "LOCAL ONLY",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "bcfb75c644d2dc8566cf8adcc35046bde4d695e803189a235a312bca75d83902",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_a6595ae3-6455-4dae-a9ae-f5e52e0d16a4",
+        "resultTier": "UNVERIFIED PAPER",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [
+            "E0_EXECUTION_BOT_CANDLE_ONLY_NOT_VERIFIABLE"
+          ],
+          "eligibility_labels": [
+            "APPROXIMATE_FILLS"
+          ],
+          "risk_class": "MODERATE",
+          "spec_hash": "bcfb75c644d2dc8566cf8adcc35046bde4d695e803189a235a312bca75d83902",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "scaled_order",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_5c57f60d-9091-4ed4-8b1f-215665c531de"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "LOW",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_1f8b5de8-8d27-45ee-9522-fb02d83dff3a",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "fdcbaf10b5d0b1f918ec22e8b5b355e57714ffe6c239922ed50c4c629babd29a",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_fded221b-327d-451d-9d3e-66f8ac28fbd5",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "fdcbaf10b5d0b1f918ec22e8b5b355e57714ffe6c239922ed50c4c629babd29a",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "APPROXIMATE_FILLS",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "orderbook_depth": "REQUIRED_FOR_VERIFIED_EXECUTION_METRICS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "position_snowball",
+      "scenario": "baseline",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_365377c6-4496-4926-8c2c-9bf4bf499fad"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_e4f08476-e891-4e60-9886-09a3486c8b43",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "ec5306e7bf641f1187adb08933b0b308bdb8850a47632d5f90771055f1a60626",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_8b935e2c-25f9-41e8-8fff-fc025d78ebc4",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "ec5306e7bf641f1187adb08933b0b308bdb8850a47632d5f90771055f1a60626",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    },
+    {
+      "botType": "position_snowball",
+      "scenario": "stress",
+      "create": {
+        "ok": true,
+        "status": 200,
+        "botSpecId": "bs_86d45afc-6560-4871-9ae4-56d5c8d74a7b"
+      },
+      "validate": {
+        "ok": true,
+        "status": 200,
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "labels": []
+      },
+      "cockpit": {
+        "ok": true,
+        "status": 200,
+        "riskClass": "MODERATE",
+        "hardBlocks": []
+      },
+      "backtestRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_2c597a19-2a97-4680-bba8-9d878c728332",
+        "resultTier": "BACKTEST VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "6b3a25abcb0bb7b43f67dd0c08e90b266acaf98dfeabe5cb1555ce32f96606a4",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      },
+      "paperRun": {
+        "ok": true,
+        "status": 200,
+        "runId": "br_95d330be-5673-44e0-8fb7-da41a0b687b0",
+        "resultTier": "LIVE PAPER VERIFIED",
+        "validation": {
+          "valid": true,
+          "errors": [],
+          "warnings": [],
+          "eligibility_labels": [],
+          "risk_class": "MODERATE",
+          "spec_hash": "6b3a25abcb0bb7b43f67dd0c08e90b266acaf98dfeabe5cb1555ce32f96606a4",
+          "compiler_version": "bot-spec-compiler-v4.1.0",
+          "fill_model_available": "STRICT_CANDLE_PENETRATION",
+          "data_requirements": {
+            "candles": "REQUIRED",
+            "mark_price": "REQUIRED_FOR_PERPS",
+            "funding_rates": "REQUIRED_FOR_PERPS"
+          }
+        }
+      }
+    }
+  ],
+  "realtime": {
+    "apiDataHealth": {
+      "ok": true,
+      "status": 200,
+      "rows": [
+        {
+          "symbol": "BTCUSDT",
+          "ageMs": 0,
+          "status": "fresh"
+        },
+        {
+          "symbol": "ETHUSDT",
+          "ageMs": 19,
+          "status": "fresh"
+        },
+        {
+          "symbol": "SOLUSDT",
+          "ageMs": 6,
+          "status": "fresh"
+        }
+      ]
+    },
+    "coverageBtc": {
+      "ok": true,
+      "status": 200,
+      "rows": [
+        {
+          "symbol": "BTCUSDT",
+          "category": "linear",
+          "interval": "15",
+          "range_start": "2026-05-21T09:15:00.000Z",
+          "range_end": "2026-05-28T09:15:00.000Z",
+          "expected_bars": 673,
+          "actual_bars": 673,
+          "missing_bars": 0,
+          "duplicate_bars": 0,
+          "data_version": "v1",
+          "subject_to_retention": false,
+          "updated_at": "2026-05-28T09:24:56.623Z"
+        },
+        {
+          "symbol": "BTCUSDT",
+          "category": "linear",
+          "interval": "15",
+          "range_start": "2026-05-21T08:57:27.616Z",
+          "range_end": "2026-05-28T08:57:27.616Z",
+          "expected_bars": 673,
+          "actual_bars": 672,
+          "missing_bars": 1,
+          "duplicate_bars": 0,
+          "data_version": "v1",
+          "subject_to_retention": false,
+          "updated_at": "2026-05-28T09:00:10.444Z"
+        },
+        {
+          "symbol": "BTCUSDT",
+          "category": "linear",
+          "interval": "15",
+          "range_start": "2026-05-28T02:58:57.096Z",
+          "range_end": "2026-05-28T08:58:57.096Z",
+          "expected_bars": 25,
+          "actual_bars": 24,
+          "missing_bars": 1,
+          "duplicate_bars": 0,
+          "data_version": "v1",
+          "subject_to_retention": false,
+          "updated_at": "2026-05-28T09:00:06.443Z"
+        }
+      ]
+    }
+  },
+  "notes": [],
+  "summary": {
+    "strategyPaperPass": 18,
+    "strategyPaperFail": 0,
+    "strategyBacktestPass": 18,
+    "strategyBacktestFail": 0,
+    "botCreatePass": 28,
+    "botCreateFail": 0,
+    "botValidateInvalid": 2,
+    "botRunPass": 28,
+    "botRunFail": 0,
+    "botPaperPass": 28,
+    "botPaperFail": 0,
+    "botRunRejected": 0
+  }
+}
