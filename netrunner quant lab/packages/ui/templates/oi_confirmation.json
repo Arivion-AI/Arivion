@@ -1,0 +1,25 @@
+{
+  "id": "oi_confirmation",
+  "name": "OI Confirmation",
+  "eligibility": "SUBJECT_TO_RETENTION",
+  "description": "OI-driven confirmation strategy requiring complete OI coverage.",
+  "strategy": {
+    "strategy": {
+      "name": "OI Confirmation",
+      "universe": { "category": "linear", "symbols": ["BTCUSDT"], "timeframe": "15", "timezone": "UTC" },
+      "data_requirements": {
+        "candles": "REQUIRED",
+        "mark_price": "REQUIRED",
+        "funding_rates": "NOT_USED",
+        "open_interest": "OPTIONAL_SUBJECT_TO_RETENTION",
+        "orderbook_depth": "NOT_USED"
+      },
+      "features": { "oi_native": { "oi_delta_6": { "type": "pct_change", "source": "open_interest", "periods": 6 } } },
+      "entry": { "long_when": { "all": ["oi_delta_6 > 0.02"] } },
+      "exit": { "any": ["stop_loss:0.02", "take_profit:0.03", "max_holding_bars:72"] },
+      "sizing": { "type": "percent_equity", "max_position_fraction": 0.07 },
+      "risk": { "max_leverage": 1, "max_daily_loss_fraction": 0.03, "max_drawdown_kill_fraction": 0.12 },
+      "accounting": { "perp_funding": "funding_history_timestamp_driven" }
+    }
+  }
+}

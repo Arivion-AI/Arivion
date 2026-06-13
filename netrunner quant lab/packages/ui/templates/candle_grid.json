@@ -1,0 +1,25 @@
+{
+  "id": "candle_grid",
+  "name": "Candle Grid",
+  "eligibility": "APPROXIMATE_FILLS",
+  "description": "Grid strategy with strict penetration caveat and approximate fill semantics.",
+  "strategy": {
+    "strategy": {
+      "name": "Candle Grid",
+      "universe": { "category": "linear", "symbols": ["BTCUSDT"], "timeframe": "15", "timezone": "UTC" },
+      "data_requirements": {
+        "candles": "REQUIRED",
+        "mark_price": "REQUIRED",
+        "funding_rates": "NOT_USED",
+        "open_interest": "NOT_USED",
+        "orderbook_depth": "NOT_USED"
+      },
+      "features": {},
+      "entry": { "long_when": { "all": ["grid_step_trigger"] } },
+      "exit": { "any": ["max_holding_bars:48"] },
+      "sizing": { "type": "percent_equity", "max_position_fraction": 0.06 },
+      "risk": { "max_leverage": 1, "max_daily_loss_fraction": 0.03, "max_drawdown_kill_fraction": 0.12 },
+      "accounting": { "perp_funding": "funding_history_timestamp_driven" }
+    }
+  }
+}

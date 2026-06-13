@@ -1,0 +1,32 @@
+{
+  "id": "funding_mr",
+  "name": "Funding Mean Reversion",
+  "eligibility": "HISTORICAL_FACTOR_OK",
+  "description": "Fade extreme funding with trend filter and funding-normalization exit.",
+  "strategy": {
+    "strategy": {
+      "name": "Funding Mean Reversion",
+      "universe": { "category": "linear", "symbols": ["BTCUSDT", "ETHUSDT"], "timeframe": "15", "timezone": "UTC" },
+      "data_requirements": {
+        "candles": "REQUIRED",
+        "mark_price": "REQUIRED",
+        "funding_rates": "REQUIRED_NATIVE_CADENCE",
+        "open_interest": "OPTIONAL_SUBJECT_TO_RETENTION",
+        "orderbook_depth": "NOT_USED"
+      },
+      "features": {
+        "candle": { "ema_slow": { "type": "ema", "source": "close", "length": 80 } },
+        "funding_native": { "funding_z": { "type": "zscore", "source": "funding_rate", "lookback_events": 30 } },
+        "oi_native": { "oi_delta_6": { "type": "pct_change", "source": "open_interest", "periods": 6 } }
+      },
+      "entry": {
+        "long_when": { "all": ["funding_z < -1.75", "oi_delta_6 > 0", "close > ema_slow"] },
+        "short_when": { "all": ["funding_z > 1.75", "oi_delta_6 > 0", "close < ema_slow"] }
+      },
+      "exit": { "any": ["funding_normalized", "stop_loss_atr", "take_profit_atr", "max_holding_bars:96"] },
+      "sizing": { "type": "percent_equity", "max_position_fraction": 0.1 },
+      "risk": { "max_leverage": 1, "max_daily_loss_fraction": 0.03, "max_drawdown_kill_fraction": 0.12 },
+      "accounting": { "perp_funding": "funding_history_timestamp_driven" }
+    }
+  }
+}

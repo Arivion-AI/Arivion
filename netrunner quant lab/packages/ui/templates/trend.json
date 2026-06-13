@@ -1,0 +1,30 @@
+{
+  "id": "trend",
+  "name": "Trend Following",
+  "eligibility": "HISTORICAL_FACTOR_OK",
+  "description": "EMA trend strategy with ATR exits and causal next-open fills.",
+  "strategy": {
+    "strategy": {
+      "name": "Trend Following",
+      "universe": { "category": "linear", "symbols": ["BTCUSDT"], "timeframe": "15", "timezone": "UTC" },
+      "data_requirements": {
+        "candles": "REQUIRED",
+        "mark_price": "REQUIRED",
+        "funding_rates": "REQUIRED_NATIVE_CADENCE",
+        "open_interest": "NOT_USED",
+        "orderbook_depth": "NOT_USED"
+      },
+      "features": {
+        "candle": {
+          "ema_fast": { "type": "ema", "source": "close", "length": 20 },
+          "ema_slow": { "type": "ema", "source": "close", "length": 80 }
+        }
+      },
+      "entry": { "long_when": { "all": ["ema_fast > ema_slow"] }, "short_when": { "all": ["ema_fast < ema_slow"] } },
+      "exit": { "any": ["stop_loss_atr", "take_profit_atr", "max_holding_bars:120"] },
+      "sizing": { "type": "percent_equity", "max_position_fraction": 0.08 },
+      "risk": { "max_leverage": 1, "max_daily_loss_fraction": 0.03, "max_drawdown_kill_fraction": 0.12 },
+      "accounting": { "perp_funding": "funding_history_timestamp_driven" }
+    }
+  }
+}

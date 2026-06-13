@@ -1,0 +1,25 @@
+{
+  "id": "orderbook_scalper",
+  "name": "Orderbook Imbalance Scalper",
+  "eligibility": "RECORDED_L2_REQUIRED",
+  "description": "Microstructure strategy requiring recorded historical L2.",
+  "strategy": {
+    "strategy": {
+      "name": "Orderbook Imbalance Scalper",
+      "universe": { "category": "linear", "symbols": ["BTCUSDT"], "timeframe": "1", "timezone": "UTC" },
+      "data_requirements": {
+        "candles": "REQUIRED",
+        "mark_price": "REQUIRED",
+        "funding_rates": "NOT_USED",
+        "open_interest": "NOT_USED",
+        "orderbook_depth": "REQUIRED"
+      },
+      "features": { "orderbook": { "imbalance": { "type": "l2_imbalance", "levels": 10 } } },
+      "entry": { "long_when": { "all": ["imbalance > 0.2"] } },
+      "exit": { "any": ["time_exit:6"] },
+      "sizing": { "type": "percent_equity", "max_position_fraction": 0.02 },
+      "risk": { "max_leverage": 1, "max_daily_loss_fraction": 0.03, "max_drawdown_kill_fraction": 0.12 },
+      "accounting": { "perp_funding": "funding_history_timestamp_driven" }
+    }
+  }
+}
