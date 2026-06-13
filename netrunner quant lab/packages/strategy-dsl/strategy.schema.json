@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://duality.local/schemas/strategy-spec.json",
+  "title": "StrategySpec",
+  "type": "object",
+  "required": ["strategy"],
+  "additionalProperties": false,
+  "properties": {
+    "strategy": {
+      "type": "object",
+      "required": ["name", "universe", "data_requirements", "features", "entry", "exit", "sizing", "risk", "accounting"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "universe": {
+          "type": "object",
+          "required": ["category", "symbols", "timeframe", "timezone"],
+          "properties": {
+            "category": { "type": "string" },
+            "symbols": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "timeframe": { "type": "string" },
+            "timezone": { "type": "string" }
+          }
+        },
+        "data_requirements": {
+          "type": "object",
+          "required": ["candles", "mark_price", "funding_rates", "open_interest", "orderbook_depth"],
+          "properties": {
+            "candles": { "$ref": "#/$defs/requirementValue" },
+            "mark_price": { "$ref": "#/$defs/requirementValue" },
+            "funding_rates": { "$ref": "#/$defs/requirementValue" },
+            "open_interest": { "$ref": "#/$defs/requirementValue" },
+            "orderbook_depth": { "$ref": "#/$defs/requirementValue" }
+          },
+          "additionalProperties": { "$ref": "#/$defs/requirementValue" }
+        },
+        "features": { "type": "object", "additionalProperties": true },
+        "entry": { "type": "object", "additionalProperties": true },
+        "exit": { "type": "object", "minProperties": 1, "additionalProperties": true },
+        "sizing": {
+          "type": "object",
+          "required": ["type", "max_position_fraction"],
+          "properties": {
+            "type": { "type": "string" },
+            "max_position_fraction": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "additionalProperties": true
+        },
+        "risk": {
+          "type": "object",
+          "required": ["max_leverage", "max_daily_loss_fraction", "max_drawdown_kill_fraction"],
+          "properties": {
+            "max_leverage": { "type": "number", "minimum": 1 },
+            "max_daily_loss_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+            "max_drawdown_kill_fraction": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "additionalProperties": true
+        },
+        "accounting": {
+          "type": "object",
+          "required": ["perp_funding"],
+          "additionalProperties": true,
+          "properties": {
+            "perp_funding": {
+              "type": "string",
+              "enum": ["funding_history_timestamp_driven"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "requirementValue": {
+      "type": "string",
+      "enum": ["REQUIRED", "REQUIRED_NATIVE_CADENCE", "OPTIONAL_SUBJECT_TO_RETENTION", "NOT_USED"]
+    }
+  }
+}

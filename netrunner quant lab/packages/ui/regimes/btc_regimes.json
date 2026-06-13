@@ -1,0 +1,38 @@
+[
+  {
+    "label": "BTC 2021 Bull",
+    "symbol": "BTCUSDT",
+    "category": "linear",
+    "interval": "60",
+    "startTs": 1609459200000,
+    "endTs": 1640908800000,
+    "regime": "bull"
+  },
+  {
+    "label": "BTC 2022 Bear",
+    "symbol": "BTCUSDT",
+    "category": "linear",
+    "interval": "60",
+    "startTs": 1640995200000,
+    "endTs": 1672444800000,
+    "regime": "bear"
+  },
+  {
+    "label": "BTC 2023-2024 Chop",
+    "symbol": "BTCUSDT",
+    "category": "linear",
+    "interval": "60",
+    "startTs": 1672531200000,
+    "endTs": 1735689600000,
+    "regime": "chop"
+  },
+  {
+    "label": "BTC 2025 Mixed",
+    "symbol": "BTCUSDT",
+    "category": "linear",
+    "interval": "60",
+    "startTs": 1735689600000,
+    "endTs": 1767139200000,
+    "regime": "mixed"
+  }
+]
