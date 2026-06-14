@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960" role="img" aria-labelledby="title desc">
+  <title id="title">Arivion Copilot Architecture</title>
+  <desc id="desc">Architecture diagram for the Copilot showing frontend, proxy, agent runtime, LLM gateway, MCP tools, storage, market data, and execution surfaces.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f8fb; }
+      .lane { fill: #ffffff; stroke: #d9dee8; stroke-width: 1.5; }
+      .lane-title { fill: #1f2937; font: 700 20px Arial, sans-serif; }
+      .box { fill: #ffffff; stroke: #aeb8c8; stroke-width: 1.4; rx: 12; }
+      .box-blue { fill: #eef6ff; stroke: #79aee8; }
+      .box-green { fill: #eefaf2; stroke: #79c78f; }
+      .box-amber { fill: #fff7e8; stroke: #e1ad55; }
+      .box-red { fill: #fff0f0; stroke: #df8585; }
+      .box-purple { fill: #f5f0ff; stroke: #a48bd8; }
+      .title { fill: #111827; font: 700 16px Arial, sans-serif; }
+      .text { fill: #374151; font: 13px Arial, sans-serif; }
+      .tiny { fill: #536173; font: 12px Arial, sans-serif; }
+      .label { fill: #536173; font: 12px Arial, sans-serif; }
+      .arrow { stroke: #4b5563; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #7b8797; stroke-width: 1.8; fill: none; marker-end: url(#arrow-soft); stroke-dasharray: 6 5; }
+      .bus { stroke: #2563eb; stroke-width: 2.2; fill: none; marker-end: url(#arrow-blue); }
+      .warn { stroke: #c2410c; stroke-width: 2; fill: none; marker-end: url(#arrow-warn); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/>
+    </marker>
+    <marker id="arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7b8797"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c2410c"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="960"/>
+  <text x="48" y="54" fill="#111827" font-family="Arial, sans-serif" font-size="30" font-weight="700">Arivion Copilot Architecture</text>
+  <text x="48" y="82" class="text">Owner-scoped agent runtime for chat, research, backtesting, managed positions, testnet execution, and live run telemetry.</text>
+
+  <rect x="40" y="120" width="360" height="760" class="lane" rx="18"/>
+  <text x="64" y="156" class="lane-title">1. Frontend and Auth</text>
+
+  <rect x="72" y="190" width="296" height="92" class="box box-blue"/>
+  <text x="94" y="220" class="title">Netrunners Copilot UI</text>
+  <text x="94" y="246" class="text">Chat composer, Nexa board, panels</text>
+  <text x="94" y="266" class="tiny">threads, widgets, live GMX, wallet state</text>
+
+  <rect x="72" y="326" width="296" height="92" class="box box-blue"/>
+  <text x="94" y="356" class="title">Next.js Copilot Proxy</text>
+  <text x="94" y="382" class="text">/api/copilot/[...path]</text>
+  <text x="94" y="402" class="tiny">streams SSE without buffering</text>
+
+  <rect x="72" y="462" width="296" height="92" class="box box-purple"/>
+  <text x="94" y="492" class="title">Privy Session Exchange</text>
+  <text x="94" y="518" class="text">x-privy-token to owner JWT</text>
+  <text x="94" y="538" class="tiny">browser never receives owner token</text>
+
+  <rect x="72" y="598" width="296" height="92" class="box"/>
+  <text x="94" y="628" class="title">Wallet and Account Panels</text>
+  <text x="94" y="654" class="text">user wallet plus agent wallet</text>
+  <text x="94" y="674" class="tiny">balances, positions, orders, approvals</text>
+
+  <path class="arrow" d="M220 282 L220 326"/>
+  <path class="arrow" d="M220 418 L220 462"/>
+  <path class="arrow-soft" d="M220 554 L220 598"/>
+
+  <rect x="440" y="120" width="560" height="760" class="lane" rx="18"/>
+  <text x="464" y="156" class="lane-title">2. Agent Runtime</text>
+
+  <rect x="474" y="190" width="214" height="86" class="box box-green"/>
+  <text x="494" y="220" class="title">Agent API Server</text>
+  <text x="494" y="246" class="text">/api/copilot routes</text>
+  <text x="494" y="266" class="tiny">auth, CORS, route wrappers</text>
+
+  <rect x="748" y="190" width="214" height="86" class="box box-green"/>
+  <text x="768" y="220" class="title">Thread Store</text>
+  <text x="768" y="246" class="text">threads, messages, runs</text>
+  <text x="768" y="266" class="tiny">steps, events, snapshots</text>
+
+  <rect x="474" y="326" width="214" height="100" class="box box-green"/>
+  <text x="494" y="356" class="title">Chat Engine</text>
+  <text x="494" y="382" class="text">system prompt plus context</text>
+  <text x="494" y="402" class="tiny">market briefing, memory, RAG</text>
+
+  <rect x="748" y="326" width="214" height="100" class="box box-purple"/>
+  <text x="768" y="356" class="title">LLM Gateway</text>
+  <text x="768" y="382" class="text">model routing and metering</text>
+  <text x="768" y="402" class="tiny">credits, BYOK guard, usage ledger</text>
+
+  <rect x="474" y="476" width="214" height="104" class="box box-amber"/>
+  <text x="494" y="506" class="title">Tool Catalog</text>
+  <text x="494" y="532" class="text">MCP plus local chat tools</text>
+  <text x="494" y="552" class="tiny">research, backtest, positions</text>
+
+  <rect x="748" y="476" width="214" height="104" class="box box-amber"/>
+  <text x="768" y="506" class="title">Plan Orchestrator</text>
+  <text x="768" y="532" class="text">typed plans and playbooks</text>
+  <text x="768" y="552" class="tiny">resume, approvals, truth cards</text>
+
+  <rect x="474" y="630" width="214" height="104" class="box box-red"/>
+  <text x="494" y="660" class="title">Governance Layer</text>
+  <text x="494" y="686" class="text">risk, budget, guardrails</text>
+  <text x="494" y="706" class="tiny">kill switch, autonomy levels</text>
+
+  <rect x="748" y="630" width="214" height="104" class="box box-green"/>
+  <text x="768" y="660" class="title">Memory and Learning</text>
+  <text x="768" y="686" class="text">episodes, semantic memory</text>
+  <text x="768" y="706" class="tiny">outcomes, reflections, policies</text>
+
+  <rect x="610" y="772" width="214" height="70" class="box box-blue"/>
+  <text x="630" y="802" class="title">Run Event Bus</text>
+  <text x="630" y="828" class="text">SSE: steps, widgets, truth cards</text>
+
+  <path class="arrow" d="M688 233 L748 233"/>
+  <path class="arrow" d="M581 276 L581 326"/>
+  <path class="arrow" d="M688 376 L748 376"/>
+  <path class="arrow" d="M581 426 L581 476"/>
+  <path class="arrow" d="M688 528 L748 528"/>
+  <path class="warn" d="M581 580 L581 630"/>
+  <path class="arrow" d="M855 580 L855 630"/>
+  <path class="bus" d="M855 734 C855 768 802 782 824 807"/>
+  <path class="bus" d="M581 734 C581 768 632 782 610 807"/>
+
+  <rect x="1040" y="120" width="360" height="760" class="lane" rx="18"/>
+  <text x="1064" y="156" class="lane-title">3. Data and Execution</text>
+
+  <rect x="1072" y="190" width="296" height="92" class="box"/>
+  <text x="1094" y="220" class="title">Postgres</text>
+  <text x="1094" y="246" class="text">agent tables and lab state</text>
+  <text x="1094" y="266" class="tiny">credits, memory, runs, positions</text>
+
+  <rect x="1072" y="326" width="296" height="92" class="box box-amber"/>
+  <text x="1094" y="356" class="title">Lab API and MCP Server</text>
+  <text x="1094" y="382" class="text">owner-scoped tools</text>
+  <text x="1094" y="402" class="tiny">market reads, bots, backtests</text>
+
+  <rect x="1072" y="462" width="296" height="92" class="box"/>
+  <text x="1094" y="492" class="title">Market and Research Feeds</text>
+  <text x="1094" y="518" class="text">Bybit, DEX, GMX, news, Dune</text>
+  <text x="1094" y="538" class="tiny">screening, sentiment, on-chain context</text>
+
+  <rect x="1072" y="598" width="296" height="92" class="box box-green"/>
+  <text x="1094" y="628" class="title">Workers and Verifier</text>
+  <text x="1094" y="654" class="text">paper sessions, replay, scoring</text>
+  <text x="1094" y="674" class="tiny">honesty fields and coverage proofs</text>
+
+  <rect x="1072" y="734" width="296" height="92" class="box box-red"/>
+  <text x="1094" y="764" class="title">Execution Surfaces</text>
+  <text x="1094" y="790" class="text">paper, managed testnet, GMX reads</text>
+  <text x="1094" y="810" class="tiny">explicit launch only, approvals enforced</text>
+
+  <path class="arrow" d="M1000 233 L1072 233"/>
+  <path class="arrow" d="M962 528 C1010 528 1020 372 1072 372"/>
+  <path class="arrow-soft" d="M1172 418 L1172 462"/>
+  <path class="arrow-soft" d="M1172 554 L1172 598"/>
+  <path class="warn" d="M1172 690 L1172 734"/>
+
+  <path class="arrow" d="M368 372 C402 372 420 233 474 233"/>
+  <text x="386" y="314" class="label">Bearer owner JWT</text>
+
+  <path class="bus" d="M610 807 C424 807 424 236 368 236"/>
+  <text x="412" y="796" class="label">SSE stream: run.step, widget, message, truth_card</text>
+
+  <path class="arrow-soft" d="M748 681 C650 681 650 250 748 250"/>
+  <text x="664" y="614" class="label">persist and recall</text>
+
+  <path class="warn" d="M688 682 L748 682"/>
+  <text x="695" y="666" class="label">policy gates every mutating action</text>
+
+  <rect x="48" y="904" width="1344" height="34" fill="#eef2f7" stroke="#d9dee8" rx="10"/>
+  <text x="68" y="926" class="tiny">Primary flow: user message -&gt; proxy auth exchange -&gt; agent chat turn -&gt; LLM/tool loop -&gt; guarded plan execution -&gt; database/results -&gt; SSE updates back to the Copilot board.</text>
+</svg>

@@ -11,6 +11,10 @@ Arivion is an agentic quant lab for designing, testing, and operating crypto tra
 - `netrunner quant lab/infra/` - Local Docker Compose infrastructure for development services.
 - `netrunner quant lab/tests/` - Golden, load, and integration-oriented test coverage.
 
+## Copilot Architecture
+
+![Arivion Copilot architecture](assets/copilot-architecture.svg)
+
 ## Frontend
 
 ```bash
