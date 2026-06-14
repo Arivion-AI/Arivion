@@ -77,15 +77,6 @@ export function DualityLanding() {
 
               <div className="arv-hazard" />
 
-              <p className="arv-warn">
-                <span className="lead">One agent. Two chains. Zero friction.</span>
-                <b>WARNING:</b> Arivion routes a single autonomous agent across
-                Robinhood and Arbitrum as one unified surface. Operate strictly
-                within your risk parameters and never expose capital you cannot
-                lose. Past performance guarantees nothing — markets move without
-                mercy.
-              </p>
-
               <div className="arv-left-foot">
                 <span className="arv-cog" />
                 <span>ARV-OS {"/"}{"/"} BUILD 1.1 — REV 02</span>
@@ -104,17 +95,6 @@ export function DualityLanding() {
               <br />
               uplink · stable
             </span>
-
-            <div className="arv-captions">
-              <p className="arv-caption">
-                Two chains. One agent. <u>One surface</u> — Robinhood and
-                Arbitrum, traded as if they were the same venue.
-              </p>
-              <p className="arv-caption">
-                The agent reads <u>both books</u>, bridges liquidity and routes
-                every order to wherever the edge lives. You never pick a chain.
-              </p>
-            </div>
 
             <div className="arv-display">
               <span className="arv-eyebrow">The cross-chain agent</span>
@@ -157,11 +137,6 @@ export function DualityLanding() {
               CHAIN <span className="idx-accent">/ 01</span>
             </span>
             <span className="name">ROBINHOOD</span>
-            <span className="desc">
-              Regulated, retail-grade execution. The agent taps deep equity and
-              crypto liquidity with familiar rails — no wallet, no gas, just
-              fills.
-            </span>
             <span className="go">
               TRADE ON ROBINHOOD <span className="arrow">→</span>
             </span>
@@ -175,11 +150,6 @@ export function DualityLanding() {
               CHAIN <span className="idx-accent">/ 02</span>
             </span>
             <span className="name">ARBITRUM</span>
-            <span className="desc">
-              On-chain, permissionless and composable. The agent settles
-              trustlessly on L2, tapping DeFi liquidity and earning yield the
-              same surface can't reach off-chain.
-            </span>
             <span className="go">
               TRADE ON ARBITRUM <span className="arrow">→</span>
             </span>
