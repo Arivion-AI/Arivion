@@ -18,8 +18,8 @@ function lineCost(tokens: number, microPerMToken: number): number {
   return Math.ceil((tokens * microPerMToken) / 1_000_000);
 }
 
-// Cost of a *known* usage against a price row. Assumes input_tokens INCLUDES cached tokens (OpenAI
-// semantics): cached are billed at the cheaper cached rate, the remainder at full input rate.
+// Cost of a *known* usage against a price row. Assumes input_tokens INCLUDES cached tokens: cached
+// are billed at the cheaper cached rate, the remainder at full input rate.
 export function costForUsage(usage: NormalizedUsage, price: PriceRow): CostBreakdown {
   const cached = Math.max(0, usage.cached_input_tokens);
   const uncachedInput = Math.max(0, usage.input_tokens - cached);

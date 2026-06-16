@@ -1,6 +1,6 @@
 -- Phase 3 — Copilot memory (episodic / semantic / procedural) + forget ledger.
 -- pgvector is bundled in the timescaledb image (vector 0.8.1). HNSW supports up to 2000 dims for the
--- `vector` type; the embedding model here (text-embedding-3-small) is 1536-dim, so vector(1536) fits.
+-- `vector` type; the embedding model is requested at 1536 dimensions, so vector(1536) fits.
 CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Raw events the agent lived through: runs, triggers, approvals, errors, web research, reflections.
@@ -83,11 +83,11 @@ CREATE TABLE IF NOT EXISTS agent_memory_deletions (
   ts                   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Embedding model price (text-embedding-3-small: ~$0.02 / 1M input tokens, no output).
+-- Embedding model price (Venice AI text embedding, no output).
 INSERT INTO agent_model_price_book
   (provider, model, input_micro_usd_per_mtoken, cached_input_micro_usd_per_mtoken,
    output_micro_usd_per_mtoken, reasoning_micro_usd_per_mtoken, source, source_url, fetched_at)
 VALUES
-  ('openai', 'text-embedding-3-small', 20000, 20000, 0, NULL,
-     'SEED_PLACEHOLDER_UNVERIFIED', 'https://openai.com/api/pricing/', now())
+  ('venice', 'text-embedding-bge-m3', 20000, 20000, 0, NULL,
+     'SEED_PLACEHOLDER_UNVERIFIED', 'https://docs.venice.ai', now())
 ON CONFLICT (provider, model, effective_from) DO NOTHING;

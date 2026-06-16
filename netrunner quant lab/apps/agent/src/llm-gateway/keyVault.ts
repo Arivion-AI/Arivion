@@ -6,11 +6,10 @@ import { GatewayError } from "./types.js";
 // has a single, safe home for key fingerprinting and the provider allowlist. No raw key is ever
 // logged or returned (corrections #5, #6).
 
-// Allowlisted provider registry (correction #6). Custom OpenAI-compatible base URLs are DISABLED in
-// v1 until SSRF protection + egress allowlisting exist — only these provider ids are permitted.
+// Allowlisted provider registry (correction #6). Custom provider base URLs are DISABLED in v1 until
+// SSRF protection + egress allowlisting exist — only these provider ids are permitted.
 export const PROVIDER_REGISTRY: Record<string, { label: string; managed: boolean }> = {
   mock: { label: "Mock (deterministic, local/test only)", managed: true },
-  openai: { label: "OpenAI", managed: true },
   anthropic: { label: "Anthropic", managed: true },
   venice: { label: "Venice AI", managed: true },
 };

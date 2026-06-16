@@ -47,15 +47,15 @@ export interface ModelPreferences {
   fallback_policy: string;
 }
 
-// Default model. Venice (the primary brain) when a VENICE_API_KEY is present, else OpenAI gpt-5-mini.
+// Default model. Venice AI is the primary brain when a VENICE_API_KEY is present.
 // The default is the high-volume actor/triage model; deep planning can still escalate via
 // planner_model (resolveModels honors it; null falls back to this default). Gated by "must be priced":
 // getPreferences falls back to any priced non-mock model if this isn't priced, so the chosen default
-// MUST have a row in agent_model_price_book (Venice: migration 0032; gpt-5-mini: 0026). Picking an
+// MUST have a row in agent_model_price_book (Venice: migration 0032). Picking an
 // unpriced/keyless default silently breaks the Copilot for new owners.
-const FALLBACK_DEFAULT = config.defaultProvider === "venice" && config.veniceApiKey
+const FALLBACK_DEFAULT = config.defaultProvider === "venice"
   ? { provider: "venice", model: config.veniceModel }
-  : { provider: "openai", model: "gpt-5-mini" };
+  : { provider: config.defaultProvider, model: config.veniceModel };
 
 // Resolve the role-specific models from a preferences row. planner/actor/triage each fall back to the
 // owner's default_model, so these columns are honored when set and harmless when null. The chat loop
@@ -78,11 +78,10 @@ export async function getPreferences(ownerId: number): Promise<ModelPreferences>
   const preferred = catalog.find(
     (c) => c.provider === FALLBACK_DEFAULT.provider && c.model === FALLBACK_DEFAULT.model,
   );
-  // Prefer the configured default provider (Venice when keyed, else OpenAI) over any other non-mock
-  // model, so the lazy default is runnable rather than a keyless model.
+  // Prefer the configured default provider over any other non-mock model, so the lazy default is
+  // runnable rather than a keyless model.
   const priced = preferred
     ?? catalog.find((c) => c.provider === FALLBACK_DEFAULT.provider)
-    ?? catalog.find((c) => c.provider === "openai")
     ?? catalog.find((c) => c.provider !== "mock")
     ?? catalog[0];
   const provider = priced?.provider ?? FALLBACK_DEFAULT.provider;

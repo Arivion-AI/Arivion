@@ -6,7 +6,7 @@ import { estimateTokensFromMessages } from "./creditMeter.js";
 // (correction #1: credit logic lives only in the gateway). Adding a provider here is the ONLY way
 // to make a new model callable; nothing else in the system may call a provider SDK directly.
 //
-// NOTE (correction #8): the OpenAI/Anthropic request/response shapes below should be re-verified
+// NOTE (correction #8): the Venice AI/Anthropic request/response shapes below should be re-verified
 // against current official docs before production billing. The 'mock' provider is fully
 // deterministic and is what the test suite exercises (no network, no API key).
 
@@ -30,8 +30,6 @@ export async function execute(args: ProviderCallArgs): Promise<ProviderResponse>
   switch (args.provider) {
     case "mock":
       return executeMock(args);
-    case "openai":
-      return executeOpenAI(args);
     case "anthropic":
       return executeAnthropic(args);
     case "venice":
@@ -77,67 +75,9 @@ function hashString(s: string): number {
   return h;
 }
 
-// --- OpenAI (chat completions) ---------------------------------------------------------------
-async function executeOpenAI(args: ProviderCallArgs): Promise<ProviderResponse> {
-  if (!config.openaiApiKey) throw new GatewayError("PROVIDER_NOT_CONFIGURED", "OPENAI_API_KEY not set", 503);
-  const base = config.litellmProxyUrl ?? "https://api.openai.com";
-  const started = Date.now();
-  let resp: Response;
-  try {
-    resp = await fetch(`${base}/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.openaiApiKey}` },
-      body: JSON.stringify({
-        model: args.model,
-        messages: args.messages.map((m) => {
-          // Serialize a valid tool-calling transcript: assistant turns carry tool_calls; tool turns
-          // carry tool_call_id. Plain turns are role+content(+name).
-          if (m.role === "assistant" && m.tool_calls?.length) {
-            return { role: "assistant", content: m.content || null, tool_calls: m.tool_calls.map((t) => ({ id: t.id, type: "function", function: { name: t.name, arguments: t.arguments } })) };
-          }
-          if (m.role === "tool") return { role: "tool", tool_call_id: m.tool_call_id, content: m.content };
-          return { role: m.role, content: m.content, name: m.name };
-        }),
-        // Newer OpenAI models (GPT-5 family, o-series) reject the deprecated `max_tokens` and require
-        // `max_completion_tokens`; gpt-4o/4o-mini accept it too, so use it for every OpenAI model.
-        max_completion_tokens: args.maxTokens,
-        ...(args.tools?.length
-          ? { tools: args.tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters ?? {} } })) }
-          : {}),
-      }),
-    });
-  } catch (e) {
-    throw new ProviderTimeoutError((e as Error).message);
-  }
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => "");
-    throw new GatewayError("PROVIDER_ERROR", `openai ${resp.status}: ${body.slice(0, 200)}`, 502);
-  }
-  const json = (await resp.json()) as any;
-  const choice = json.choices?.[0]?.message ?? {};
-  const u = json.usage ?? {};
-  return {
-    content: typeof choice.content === "string" ? choice.content : "",
-    toolCalls: (choice.tool_calls ?? []).map((tc: any) => ({
-      id: tc.id, name: tc.function?.name, arguments: tc.function?.arguments ?? "{}",
-    })),
-    usage: {
-      input_tokens: Number(u.prompt_tokens ?? 0),
-      cached_input_tokens: Number(u.prompt_tokens_details?.cached_tokens ?? 0),
-      output_tokens: Number(u.completion_tokens ?? 0),
-      reasoning_tokens: Number(u.completion_tokens_details?.reasoning_tokens ?? 0),
-      tool_call_count: (choice.tool_calls ?? []).length,
-      provider_request_id: json.id,
-      latency_ms: Date.now() - started,
-    },
-  };
-}
-
-// --- Venice (OpenAI-compatible chat completions) ---------------------------------------------
-// Venice exposes an OpenAI-compatible surface (tools[] in, tool_calls out), so this mirrors
-// executeOpenAI. Two differences: (1) veniceBaseUrl ALREADY ends in /api/v1, so we call
-// `${base}/chat/completions` with no extra /v1; (2) Venice accepts the classic `max_tokens`. Only
-// models whose /models capabilities report supportsFunctionCalling=true will honor `tools`.
+// --- Venice AI (chat completions) ------------------------------------------------------------
+// veniceBaseUrl ALREADY ends in /api/v1, so call `${base}/chat/completions` with no extra /v1.
+// Only models whose /models capabilities report supportsFunctionCalling=true will honor `tools`.
 async function executeVenice(args: ProviderCallArgs): Promise<ProviderResponse> {
   if (!config.veniceApiKey) throw new GatewayError("PROVIDER_NOT_CONFIGURED", "VENICE_API_KEY not set", 503);
   const base = config.veniceBaseUrl;
@@ -200,28 +140,28 @@ export interface EmbedResult {
   latency_ms: number;
 }
 
-// Embed text into a vector. Only OpenAI is wired (text-embedding-3-*). Like the chat adapters this
-// only calls the provider + normalizes usage; the gateway owns credit movement.
+// Embed text into a vector. Like the chat adapters this only calls the provider + normalizes usage;
+// the gateway owns credit movement.
 export async function embed(provider: string, model: string, text: string): Promise<EmbedResult> {
-  if (provider !== "openai") {
+  if (provider !== "venice") {
     throw new GatewayError("PROVIDER_NOT_SUPPORTED", `no embedding adapter for provider '${provider}'`, 400);
   }
-  if (!config.openaiApiKey) throw new GatewayError("PROVIDER_NOT_CONFIGURED", "OPENAI_API_KEY not set", 503);
-  const base = config.litellmProxyUrl ?? "https://api.openai.com";
+  if (!config.veniceApiKey) throw new GatewayError("PROVIDER_NOT_CONFIGURED", "VENICE_API_KEY not set", 503);
+  const base = config.veniceBaseUrl;
   const started = Date.now();
   let resp: Response;
   try {
-    resp = await fetch(`${base}/v1/embeddings`, {
+    resp = await fetch(`${base}/embeddings`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.openaiApiKey}` },
-      body: JSON.stringify({ model, input: text.slice(0, 32000) }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.veniceApiKey}` },
+      body: JSON.stringify({ model, input: text.slice(0, 32000), dimensions: config.embeddingDim }),
     });
   } catch (e) {
     throw new ProviderTimeoutError((e as Error).message);
   }
   if (!resp.ok) {
     const body = await resp.text().catch(() => "");
-    throw new GatewayError("PROVIDER_ERROR", `openai embeddings ${resp.status}: ${body.slice(0, 200)}`, 502);
+    throw new GatewayError("PROVIDER_ERROR", `venice embeddings ${resp.status}: ${body.slice(0, 200)}`, 502);
   }
   const json = (await resp.json()) as any;
   const vector: number[] = json.data?.[0]?.embedding ?? [];

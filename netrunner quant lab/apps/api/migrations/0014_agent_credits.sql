@@ -152,7 +152,7 @@ CREATE INDEX IF NOT EXISTS agent_model_price_book_active_idx
 CREATE TABLE IF NOT EXISTS agent_model_preferences (
   owner_id              BIGINT PRIMARY KEY REFERENCES users(id),
   default_provider_mode TEXT NOT NULL DEFAULT 'managed',
-  default_provider      TEXT NOT NULL DEFAULT 'openai',
+  default_provider      TEXT NOT NULL DEFAULT 'venice',
   default_model         TEXT NOT NULL,
   planner_model         TEXT,
   actor_model           TEXT,
@@ -174,10 +174,6 @@ INSERT INTO agent_model_price_book
 VALUES
   ('mock', 'mock-echo', 0, 0, 0, NULL,
      'SEED_INTERNAL', NULL, now()),
-  ('openai', 'gpt-4o-mini', 150000, 75000, 600000, NULL,
-     'SEED_PLACEHOLDER_UNVERIFIED', 'https://openai.com/api/pricing/', now()),
-  ('openai', 'gpt-4o', 2500000, 1250000, 10000000, NULL,
-     'SEED_PLACEHOLDER_UNVERIFIED', 'https://openai.com/api/pricing/', now()),
   ('anthropic', 'claude-3-5-haiku', 800000, 80000, 4000000, NULL,
      'SEED_PLACEHOLDER_UNVERIFIED', 'https://www.anthropic.com/pricing', now()),
   ('anthropic', 'claude-3-5-sonnet', 3000000, 300000, 15000000, NULL,

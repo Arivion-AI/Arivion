@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Live 5-minute managed-position run: real GPT-5 decision + real BYBIT mark-price feed driving the
+# Live 5-minute managed-position run: real Venice AI decision + real BYBIT mark-price feed driving the
 # monitor every 10s (Duality is Bybit-native; the Lab's own candles are Bybit too). The position
 # carries a TIGHT exit policy so real intra-5-minute micro-moves exercise the stop / take-profit /
 # trailing logic. (The live-paper session plumbing needs the data-ingestor; here the position is fed
@@ -18,7 +18,7 @@ OWNER_ID=$($PG "SELECT id FROM users WHERE privy_did='did:dev:$OWNER'")
 AUTH=(-H "Authorization: Bearer $TOK" -H 'Content-Type: application/json')
 curl -s "${AUTH[@]}" -X POST $AGENT/api/copilot/kill-switch -d '{"autonomy_level":"L2"}' >/dev/null
 
-echo "=== GPT-5 trading-firm decision (recorded) ==="
+echo "=== Venice AI trading-firm decision (recorded) ==="
 curl -s "${AUTH[@]}" -X POST $AGENT/api/copilot/analyze -d '{"symbol":"BTCUSDT","category":"linear","use_web":true}' \
   | J 'print("  action:",d.get("action"),"conf:",d.get("confidence"));print("  rationale:",d.get("rationale"))'
 

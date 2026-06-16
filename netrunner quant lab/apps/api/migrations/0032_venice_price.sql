@@ -1,7 +1,7 @@
 -- 0032: Price-book rows for Venice AI models (the Copilot's primary brain after the port).
 -- A managed call with no ACTIVE price row is BLOCKED by design (see llm-gateway/index.ts
 -- NO_ACTIVE_PRICE), so the configured VENICE_MODEL (default mistral-small-3-2-24b-instruct) needs a
--- row here or new owners silently fall back to OpenAI. Model IDs below were verified against the
+-- row here or new owners silently fall back to another managed provider. Model IDs below were verified against the
 -- LIVE catalog (GET https://api.venice.ai/api/v1/models?type=text) on 2026-06-15 — all report
 -- capabilities.supportsFunctionCalling=true. Costs are micro-USD per million tokens, marked
 -- UNVERIFIED placeholders (same convention as 0014/0026) — verify against Venice's live pricing
@@ -11,7 +11,7 @@ INSERT INTO agent_model_price_book
   (provider, model, input_micro_usd_per_mtoken, cached_input_micro_usd_per_mtoken,
    output_micro_usd_per_mtoken, reasoning_micro_usd_per_mtoken, source, source_url, fetched_at)
 VALUES
-  -- Lightweight default (gpt-5-mini equivalent).
+  -- Lightweight default.
   ('venice', 'mistral-small-3-2-24b-instruct', 200000, NULL, 600000, NULL,
      'SEED_PLACEHOLDER_UNVERIFIED', 'https://docs.venice.ai', now()),
   -- Cheaper flash alternative.

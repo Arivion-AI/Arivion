@@ -80,7 +80,7 @@ services:
       COPILOT_BYOK_ENABLED: "false"
       COPILOT_KEY_FINGERPRINT_SECRET: ${COPILOT_KEY_FINGERPRINT_SECRET:-REDACTED_COPILOT_KEY_FINGERPRINT_SECRET}
       COPILOT_ADMIN_OWNER_IDS: "3"
-      OPENAI_API_KEY: ${OPENAI_API:-}
+      VENICE_API_KEY: ${VENICE_API_KEY:-}
     depends_on:
       postgres:
         condition: service_started

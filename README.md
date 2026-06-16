@@ -273,7 +273,7 @@ It handles:
 - Usage events.
 - Run-level usage rollups.
 
-The Copilot can choose separate model roles such as planner, actor, triage, and embedding model. For tool execution, the actor must support tool calling. If the preferred actor cannot call tools, the service can switch to a configured OpenAI tool-capable model for that turn.
+The Copilot can choose separate model roles such as planner, actor, triage, and embedding model. For tool execution, the actor must support tool calling. If the preferred actor cannot call tools, the service can switch to a configured Venice AI tool-capable model for that turn.
 
 ### Tool System
 
@@ -927,7 +927,7 @@ NETRUNNERS_API_URL=http://localhost:4000
 Copilot and LLM:
 
 ```text
-OPENAI_API_KEY=...
+VENICE_API_KEY=...
 COPILOT_ADMIN_OWNER_IDS=...
 COPILOT_MAX_COST_PER_DAY_USD=...
 COPILOT_BYOK_ENABLED=false

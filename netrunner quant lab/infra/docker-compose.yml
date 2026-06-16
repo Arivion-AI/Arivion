@@ -188,9 +188,8 @@ services:
       COPILOT_KEY_FINGERPRINT_SECRET: REDACTED_COPILOT_KEY_FINGERPRINT_SECRET
       # Phase 8 — dev admin (owner 3 is the dev-token owner) for the admin budget dashboard.
       COPILOT_ADMIN_OWNER_IDS: "3"
-      # Managed provider keys — supply OPENAI_API_KEY / ANTHROPIC_API_KEY to enable real models.
-      # Sourced from the lab .env (key is stored there as OPENAI_API) via compose interpolation.
-      OPENAI_API_KEY: ${OPENAI_API:-}
+      # Managed provider keys — supply VENICE_API_KEY / ANTHROPIC_API_KEY to enable real models.
+      VENICE_API_KEY: ${VENICE_API_KEY:-}
       # ANTHROPIC_API_KEY: ""
       # On-chain data brain (GMX REST + Uniswap subgraph + Dune). Read-only / paper-sim only.
       DUNE_API_KEY: ${DUNE_API_KEY:-}

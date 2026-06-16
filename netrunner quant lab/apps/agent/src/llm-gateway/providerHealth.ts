@@ -23,8 +23,6 @@ export function isConfigured(provider: string): boolean {
   switch (provider) {
     case "mock":
       return true;
-    case "openai":
-      return Boolean(config.openaiApiKey || config.litellmProxyUrl);
     case "anthropic":
       return Boolean(config.anthropicApiKey || config.litellmProxyUrl);
     case "venice":

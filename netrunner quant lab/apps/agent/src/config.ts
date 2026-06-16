@@ -46,8 +46,8 @@ export const config = {
 
   // Phase 3 — memory. Embeddings are computed with this model; recall filters by embedding_model so
   // vectors from different models are never compared.
-  embeddingProvider: process.env.COPILOT_EMBEDDING_PROVIDER ?? "openai",
-  embeddingModel: process.env.COPILOT_EMBEDDING_MODEL ?? "text-embedding-3-small",
+  embeddingProvider: process.env.COPILOT_EMBEDDING_PROVIDER ?? "venice",
+  embeddingModel: process.env.COPILOT_EMBEDDING_MODEL ?? "text-embedding-bge-m3",
   embeddingDim: num("COPILOT_EMBEDDING_DIM", 1536),
   memoryRecallTopN: num("COPILOT_MEMORY_RECALL_TOP_N", 6),
 
@@ -153,22 +153,20 @@ export const config = {
   uniswapCacheTtlMs: num("UNISWAP_CACHE_TTL_MS", 120000),
 
   // Provider keys (managed mode). Optional — absence makes that provider unavailable, not fatal.
-  openaiApiKey: process.env.OPENAI_API_KEY,
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   litellmProxyUrl: process.env.LITELLM_PROXY_URL,
 
-  // Venice AI (OpenAI-compatible) — the primary agent brain. Base URL already includes /api/v1, so
+  // Venice AI — the primary agent brain. Base URL already includes /api/v1, so
   // the adapter must NOT append another /v1. veniceModel is the tool-capable actor; it MUST have a
   // price-book row (see migration 0032) and report capabilities.supportsFunctionCalling=true at
   // GET {veniceBaseUrl}/models. Override VENICE_MODEL only to another function-calling model that is
   // also seeded in the price book.
-  // Actor LLM provider for the agent. EASY SWAP: set COPILOT_DEFAULT_PROVIDER=openai (default, reliable
-  // tool-calling via gpt-5-mini) or =venice (mistral-small etc; weaker tool-calling). Whichever is
-  // chosen must be configured (key present) + priced, else the catalog falls back to OpenAI.
-  defaultProvider: (process.env.COPILOT_DEFAULT_PROVIDER ?? "openai").toLowerCase(),
+  // Actor LLM provider for the agent. Venice AI is the default and must be configured (key present)
+  // + priced, else the catalog falls back to another managed non-mock provider when available.
+  defaultProvider: (process.env.COPILOT_DEFAULT_PROVIDER ?? "venice").toLowerCase(),
   veniceApiKey: process.env.VENICE_API_KEY,
   veniceBaseUrl: process.env.VENICE_BASE_URL ?? "https://api.venice.ai/api/v1",
-  // Lightweight gpt-5-mini-equivalent: Venice-native 24B, reliable function calling, cheap/fast.
+  // Lightweight Venice-native 24B model with reliable function calling, cheap/fast.
   // (Confirmed available + supportsFunctionCalling via GET /models on 2026-06-15.)
   veniceModel: process.env.VENICE_MODEL ?? "mistral-small-3-2-24b-instruct",
 

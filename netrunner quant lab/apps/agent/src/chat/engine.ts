@@ -97,29 +97,22 @@ Hard truths you must respect:
 When a tool returns results, summarize them plainly for the user.`;
 
 function providerSupportsToolCalling(provider: string): boolean {
-  // Venice (OpenAI-compatible) and OpenAI chat-completions tool calls are wired in providerRouter.
+  // Venice AI chat-completions tool calls are wired in providerRouter.
   // Anthropic is text-only here, so using it for the actor makes Copilot sound smart but unable to act.
-  return provider === "venice" || provider === "openai";
+  return provider === "venice";
 }
 
 async function pickToolCapableActor(currentProvider: string, currentModel: string): Promise<{ provider: string; model: string; switched: boolean }> {
   if (providerSupportsToolCalling(currentProvider)) return { provider: currentProvider, model: currentModel, switched: false };
-  // Pick a tool-capable actor with a managed price row, honoring COPILOT_DEFAULT_PROVIDER. OpenAI
-  // (gpt-5-mini) is the default — reliable tool-calling; Venice is opt-in via the env. Try the
-  // configured default first, then the other as fallback.
+  // Pick a tool-capable Venice AI actor with a managed price row.
   const catalog = await getManagedCatalog().catch(() => []);
-  const tryOpenAI = () => {
-    if (!isConfigured("openai")) return null;
-    const m = catalog.find((c) => c.provider === "openai" && c.model === "gpt-5-mini") ?? catalog.find((c) => c.provider === "openai");
-    return m ? { provider: m.provider, model: m.model, switched: true } : null;
-  };
   const tryVenice = () => {
     if (!isConfigured("venice")) return null;
     const m = catalog.find((c) => c.provider === "venice" && c.model === config.veniceModel) ?? catalog.find((c) => c.provider === "venice");
     return m ? { provider: m.provider, model: m.model, switched: true } : null;
   };
-  const order = config.defaultProvider === "venice" ? [tryVenice, tryOpenAI] : [tryOpenAI, tryVenice];
-  for (const pick of order) { const r = pick(); if (r) return r; }
+  const r = tryVenice();
+  if (r) return r;
   return { provider: currentProvider, model: currentModel, switched: false };
 }
 
