@@ -640,12 +640,12 @@ app.get("/metrics", async (_req, res) => {
 app.get("/auth/dev-token", async (req, res) => {
   // SECURITY: this endpoint mints a JWT for ANY ownerId — it is a full auth bypass and
   // MUST be off in production. Disabled unless ALLOW_DEV_TOKEN=true is explicitly set,
-  // and refused if the signing secret is still the public default.
+  // and refused if the signing secret is unset or still a placeholder.
   if (process.env.ALLOW_DEV_TOKEN !== "true") {
     return res.status(403).json({ error: "DEV_TOKEN_DISABLED",
       reason: "set ALLOW_DEV_TOKEN=true to enable (dev/test only)" });
   }
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "REDACTED_JWT_SECRET") {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "change-me") {
     return res.status(403).json({ error: "DEV_TOKEN_DISABLED",
       reason: "refusing to issue with the default/unset JWT_SECRET" });
   }

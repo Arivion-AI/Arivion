@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import http from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { createApp } from "../src/server.js";
 import { db } from "../src/db.js";
@@ -15,7 +15,8 @@ import { updatePreferences } from "../src/llm-gateway/modelCatalog.js";
 
 const ENABLED = process.env.RUN_DB_TESTS === "1";
 const d = ENABLED ? describe : describe.skip;
-const SECRET = process.env.JWT_SECRET ?? "REDACTED_JWT_SECRET";
+const SECRET = process.env.JWT_SECRET ?? randomBytes(32).toString("hex");
+process.env.JWT_SECRET = SECRET;
 
 let server: http.Server;
 let base = "";

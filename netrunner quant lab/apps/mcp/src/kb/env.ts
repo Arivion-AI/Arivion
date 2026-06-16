@@ -14,7 +14,7 @@ export const ENV_REFERENCE: Record<string, EnvVar[]> = {
     { name: "QUANT_WORKER_URL", default: "http://worker:7000", meaning: "Worker base URL." },
     { name: "DUALITY_VERIFIER_URL", default: "http://verifier:7200", meaning: "Verifier base URL." },
     { name: "DATA_INGESTOR_URL / INGESTOR_URL", default: "http://data-ingestor:7100", meaning: "Ingestor base URL." },
-    { name: "JWT_SECRET", default: "REDACTED_JWT_SECRET", meaning: "HS256 signing/verify key — override in prod." },
+    { name: "JWT_SECRET", default: "(required)", meaning: "HS256 signing/verify key." },
     { name: "JWT_AUDIENCE / JWT_ISSUER", default: "unset", meaning: "Optional JWT claims enforced if set." },
     { name: "ALLOW_DEV_TOKEN", default: "OFF", meaning: "Must be 'true' to enable /auth/dev-token (and non-default JWT_SECRET)." },
     { name: "INTERNAL_SECRET", default: "unset", meaning: "Shared secret sent to worker as x-internal-secret." },
@@ -50,7 +50,7 @@ export const ENV_REFERENCE: Record<string, EnvVar[]> = {
   ],
   verifier: [
     { name: "DATABASE_URL", default: "as api", meaning: "Reads canonical candles." },
-    { name: "VERIFIER_SIGNING_KEY", default: "REDACTED_VERIFIER_SIGNING_KEY", meaning: "Passport HMAC signing key." },
+    { name: "VERIFIER_SIGNING_KEY", default: "(required)", meaning: "Passport HMAC signing key." },
   ],
   "mcp (this server)": [
     { name: "DUALITY_API_URL", default: "http://localhost:4400", meaning: "API base." },

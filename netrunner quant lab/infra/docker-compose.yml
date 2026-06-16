@@ -6,18 +6,18 @@ services:
     ports:
       - "4400:4000"
     environment:
-      DATABASE_URL: postgres://postgres:5432/duality
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: redis://redis:6379
       QUANT_WORKER_URL: http://worker:7000
       DUALITY_VERIFIER_URL: http://verifier:7200
       DATA_INGESTOR_URL: http://data-ingestor:7100
-      JWT_SECRET: REDACTED_JWT_SECRET
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       ALLOW_DEV_TOKEN: "true"            # DEV ONLY — never set in production
-      INTERNAL_SECRET: REDACTED_INTERNAL_SECRET
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?set INTERNAL_SECRET}
       API_PORT: 4000
       # §25 Privy — public app id; verification uses the public JWKS (PRIVY_VERIFICATION_KEY left
       # unset). PRIVY_APP_SECRET is NOT set here (not needed on the verify path).
-      PRIVY_APP_ID: REDACTED_PRIVY_APP_ID
+      PRIVY_APP_ID: ${PRIVY_APP_ID:?set PRIVY_APP_ID}
       # Chain RPC endpoints (interpolated from the lab .env) — used by the chain registry /
       # chain_health and live wallet-balance reads. Arbitrum One = real-data; Sepolia/RH = testnet.
       ARBITRUM_ONE_RPC_URL: ${ARBITRUM_ONE_RPC_URL:-}
@@ -41,7 +41,7 @@ services:
       DUALITY_MOCK_USDG_ADDRESS: ${DUALITY_MOCK_USDG_ADDRESS:-}
       DUALITY_STOCK_TOKENS: ${DUALITY_STOCK_TOKENS:-}
       AGENT_MAX_BUY_USDG: ${AGENT_MAX_BUY_USDG:-2000}
-      AGENT_WALLET_MASTER_KEY: ${AGENT_WALLET_MASTER_KEY:-REDACTED_AGENT_WALLET_MASTER_KEY}
+      AGENT_WALLET_MASTER_KEY: ${AGENT_WALLET_MASTER_KEY:?set AGENT_WALLET_MASTER_KEY}
       AGENT_GAS_TOPUP_ETH: ${AGENT_GAS_TOPUP_ETH:-0.004}
       DUALITY_AMM_ADDRESS: ${DUALITY_AMM_ADDRESS:-}
       DUALITY_AMM_TOKEN0: ${DUALITY_AMM_TOKEN0:-}
@@ -59,12 +59,12 @@ services:
       dockerfile: apps/worker/Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://postgres:5432/duality
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: redis://redis:6379
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
-      INTERNAL_SECRET: REDACTED_INTERNAL_SECRET
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?set INTERNAL_SECRET}
       HEAVY_CONCURRENCY: "4"            # sane default; 1 py process ≈ 1 core (use a pool to scale)
     depends_on:
       postgres:
@@ -77,7 +77,7 @@ services:
       context: ..
       dockerfile: apps/data-ingestor/Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:5432/duality
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: redis://redis:6379
       BYBIT_BASE_URL: https://api.bybit.com
       BYBIT_WS_PUBLIC_LINEAR: wss://stream.bybit.com/v5/public/linear
@@ -108,8 +108,8 @@ services:
     ports:
       - "7200:7200"
     environment:
-      DATABASE_URL: postgres://postgres:5432/duality
-      VERIFIER_SIGNING_KEY: REDACTED_VERIFIER_SIGNING_KEY
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      VERIFIER_SIGNING_KEY: ${VERIFIER_SIGNING_KEY:?set VERIFIER_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_started
@@ -154,7 +154,7 @@ services:
       # configured uses one pre-minted DUALITY_API_TOKEN.)
       DUALITY_AUTH_MODE: passthrough
       DUALITY_DEFAULT_OWNER_ID: "1"
-      INTERNAL_SECRET: REDACTED_INTERNAL_SECRET
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?set INTERNAL_SECRET}
       # Expose verifier/ingestor/sandbox tools too.
       DUALITY_ENABLE_INTERNAL: "true"
     depends_on:
@@ -171,11 +171,11 @@ services:
       - "4500:4500"
     environment:
       AGENT_PORT: "4500"
-      DATABASE_URL: postgres://postgres:5432/duality
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       REDIS_URL: redis://redis:6379
       MCP_SERVER_URL: http://mcp:8080
       NETRUNNERS_API_URL: http://api:4000
-      JWT_SECRET: REDACTED_JWT_SECRET
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       COPILOT_WELCOME_CREDIT_USD: "2.00"
       COPILOT_WELCOME_CREDIT_EXPIRES_DAYS: "30"
       COPILOT_MAX_COST_PER_RUN_USD: "1.00"
@@ -185,7 +185,7 @@ services:
       COPILOT_MAX_MODEL_CONTEXT_TOKENS: "200000"
       # BYOK stays OFF until KMS exists (correction #2). Fingerprint secret is dev-only here.
       COPILOT_BYOK_ENABLED: "false"
-      COPILOT_KEY_FINGERPRINT_SECRET: REDACTED_COPILOT_KEY_FINGERPRINT_SECRET
+      COPILOT_KEY_FINGERPRINT_SECRET: ${COPILOT_KEY_FINGERPRINT_SECRET:?set COPILOT_KEY_FINGERPRINT_SECRET}
       # Phase 8 — dev admin (owner 3 is the dev-token owner) for the admin budget dashboard.
       COPILOT_ADMIN_OWNER_IDS: "3"
       # Managed provider keys — supply VENICE_API_KEY / ANTHROPIC_API_KEY to enable real models.
@@ -218,9 +218,9 @@ services:
   postgres:
     image: timescale/timescaledb:latest-pg16
     environment:
-      POSTGRES_USER: duality
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-      POSTGRES_DB: duality
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
 

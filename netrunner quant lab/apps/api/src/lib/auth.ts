@@ -93,9 +93,14 @@ declare global {
   }
 }
 
-const jwtSecret = process.env.JWT_SECRET ?? "REDACTED_JWT_SECRET";
 const jwtAudience = process.env.JWT_AUDIENCE;
 const jwtIssuer = process.env.JWT_ISSUER;
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is required");
+  return secret;
+}
 
 const publicApiPaths = new Set<string>([
   "/health",
@@ -146,7 +151,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     if (jwtAudience) verifyOptions.audience = jwtAudience;
     if (jwtIssuer) verifyOptions.issuer = jwtIssuer;
 
-    const claims = jwt.verify(token, jwtSecret, verifyOptions) as AuthClaims;
+    const claims = jwt.verify(token, getJwtSecret(), verifyOptions) as AuthClaims;
     const ownerId = Number(claims.sub);
     if (!Number.isInteger(ownerId) || ownerId <= 0) {
       res.status(401).json({ error: "UNAUTHORIZED", reason: "INVALID_SUB_CLAIM" });
@@ -178,7 +183,7 @@ export function issueDevToken(ownerId: number, ver = 0): string {
   };
   if (jwtIssuer) signOptions.issuer = jwtIssuer;
   if (jwtAudience) signOptions.audience = jwtAudience;
-  return jwt.sign(payload, jwtSecret, signOptions);
+  return jwt.sign(payload, getJwtSecret(), signOptions);
 }
 
 // The internal token minted for a Privy-authenticated owner is the SAME HS256 owner token the

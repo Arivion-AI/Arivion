@@ -16,6 +16,7 @@ RD_PORT=56379
 WK_PORT=57000
 API_PORT=57002
 ISECRET="eph-internal-$SUF"
+JSECRET="$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')"
 API_PID=""
 
 cleanup() {
@@ -77,7 +78,7 @@ docker run -d --rm --network "$NET" --name "$WK" \
 echo "--- boot API on :$API_PORT ---"
 ( cd apps/api && \
   DATABASE_URL="$DATABASE_URL" REDIS_URL="$REDIS_URL" \
-  API_PORT=$API_PORT ALLOW_DEV_TOKEN=true JWT_SECRET="eph-test-secret-$SUF" \
+  API_PORT=$API_PORT ALLOW_DEV_TOKEN=true JWT_SECRET="$JSECRET" \
   PRIVY_APP_ID="test-privy-app" PRIVY_VERIFICATION_KEY="$PUB" \
   OWNER_TOKEN_TTL=12h AUTH_SESSION_RATE_PER_MIN=20 \
   INTERNAL_SECRET="$ISECRET" \

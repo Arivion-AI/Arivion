@@ -6,9 +6,14 @@ import jwt from "jsonwebtoken";
 // (the browser never holds it) — identical to the existing /api/netrunners/* proxy. EventSource
 // (SSE) can't set headers, so ?token= is accepted as a fallback, matching the API.
 
-const jwtSecret = process.env.JWT_SECRET ?? "REDACTED_JWT_SECRET";
 const jwtAudience = process.env.JWT_AUDIENCE;
 const jwtIssuer = process.env.JWT_ISSUER;
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is required");
+  return secret;
+}
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -37,7 +42,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     const opts: jwt.VerifyOptions = { algorithms: ["HS256"] };
     if (jwtAudience) opts.audience = jwtAudience;
     if (jwtIssuer) opts.issuer = jwtIssuer;
-    const claims = jwt.verify(token, jwtSecret, opts) as { sub?: string };
+    const claims = jwt.verify(token, getJwtSecret(), opts) as { sub?: string };
     const ownerId = Number(claims.sub);
     if (!Number.isInteger(ownerId) || ownerId <= 0) {
       res.status(401).json({ error: "UNAUTHORIZED", reason: "INVALID_SUB_CLAIM" });

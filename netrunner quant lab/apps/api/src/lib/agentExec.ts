@@ -28,7 +28,9 @@ function treasury(provider: JsonRpcProvider): Wallet {
 }
 
 // --- Per-user agent wallets (encrypted at rest; auto gas-funded from treasury) ---
-const ENC_KEY = createHash("sha256").update(process.env.AGENT_WALLET_MASTER_KEY ?? "REDACTED_AGENT_WALLET_MASTER_KEY").digest();
+const masterKey = process.env.AGENT_WALLET_MASTER_KEY;
+if (!masterKey) throw new Error("AGENT_WALLET_MASTER_KEY is required");
+const ENC_KEY = createHash("sha256").update(masterKey).digest();
 function encPk(pk: string): string {
   const iv = randomBytes(12); const c = createCipheriv("aes-256-gcm", ENC_KEY, iv);
   const e = Buffer.concat([c.update(pk, "utf8"), c.final()]);

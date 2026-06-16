@@ -23,3 +23,5 @@ netrunner quant lab/contracts/lib/
 
 # Foundry build cache (regenerable; contains RPC endpoints)
 **/contracts/cache/
+**/contracts/out/
+**/contracts/broadcast/

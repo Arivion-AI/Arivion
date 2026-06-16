@@ -56,7 +56,10 @@ def _db_url() -> str:
 
 
 def _signing_key() -> bytes:
-    return os.getenv("VERIFIER_SIGNING_KEY", "REDACTED_VERIFIER_SIGNING_KEY").encode("utf-8")
+    key = os.getenv("VERIFIER_SIGNING_KEY")
+    if not key:
+        raise RuntimeError("VERIFIER_SIGNING_KEY is required")
+    return key.encode("utf-8")
 
 
 def _stable_hash(payload: object) -> str:
