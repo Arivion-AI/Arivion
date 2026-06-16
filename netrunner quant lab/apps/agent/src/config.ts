@@ -157,6 +157,21 @@ export const config = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   litellmProxyUrl: process.env.LITELLM_PROXY_URL,
 
+  // Venice AI (OpenAI-compatible) — the primary agent brain. Base URL already includes /api/v1, so
+  // the adapter must NOT append another /v1. veniceModel is the tool-capable actor; it MUST have a
+  // price-book row (see migration 0032) and report capabilities.supportsFunctionCalling=true at
+  // GET {veniceBaseUrl}/models. Override VENICE_MODEL only to another function-calling model that is
+  // also seeded in the price book.
+  // Actor LLM provider for the agent. EASY SWAP: set COPILOT_DEFAULT_PROVIDER=openai (default, reliable
+  // tool-calling via gpt-5-mini) or =venice (mistral-small etc; weaker tool-calling). Whichever is
+  // chosen must be configured (key present) + priced, else the catalog falls back to OpenAI.
+  defaultProvider: (process.env.COPILOT_DEFAULT_PROVIDER ?? "openai").toLowerCase(),
+  veniceApiKey: process.env.VENICE_API_KEY,
+  veniceBaseUrl: process.env.VENICE_BASE_URL ?? "https://api.venice.ai/api/v1",
+  // Lightweight gpt-5-mini-equivalent: Venice-native 24B, reliable function calling, cheap/fast.
+  // (Confirmed available + supportsFunctionCalling via GET /models on 2026-06-15.)
+  veniceModel: process.env.VENICE_MODEL ?? "mistral-small-3-2-24b-instruct",
+
   // BYOK (Phase 12) — OFF until KMS exists (correction #2).
   byokEnabled: bool("COPILOT_BYOK_ENABLED", false),
   keyFingerprintSecret: process.env.COPILOT_KEY_FINGERPRINT_SECRET,

@@ -12,6 +12,7 @@ export const PROVIDER_REGISTRY: Record<string, { label: string; managed: boolean
   mock: { label: "Mock (deterministic, local/test only)", managed: true },
   openai: { label: "OpenAI", managed: true },
   anthropic: { label: "Anthropic", managed: true },
+  venice: { label: "Venice AI", managed: true },
 };
 
 export function assertAllowlistedProvider(provider: string): void {

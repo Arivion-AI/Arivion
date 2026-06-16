@@ -1,9 +1,9 @@
 import { runtimeCopilotConfig } from "@/lib/copilot/config";
 
-// Copilot proxy. Mirrors the /api/netrunners/[...path] proxy (Privy access token in x-privy-token →
-// internal owner token via the Lab API /auth/session), but forwards the Bearer to the AGENT service.
-// The browser never holds the owner token. Supports SSE (streamed response bodies pass straight
-// through). The owner token verifies on the agent because both share JWT_SECRET.
+// Copilot proxy. Mirrors the /api/netrunners/[...path] proxy: the browser sends the internal owner
+// JWT (minted by SIWE sign-in) as `x-owner-token`; the proxy forwards it as a Bearer to the AGENT
+// service. Supports SSE (streamed response bodies pass straight through). The owner token verifies
+// on the agent because both share JWT_SECRET.
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te",
@@ -11,44 +11,12 @@ const HOP_BY_HOP_HEADERS = new Set([
 ]);
 
 let cachedDevToken: { value: string; expiresAt: number } | null = null;
-const ownerTokenByPrivy = new Map<string, { value: string; expiresAt: number }>();
-const OWNER_TOKEN_CACHE_MAX = 1000;
-
-function sweep(now: number): void {
-  for (const [k, v] of ownerTokenByPrivy) if (v.expiresAt <= now) ownerTokenByPrivy.delete(k);
-  while (ownerTokenByPrivy.size > OWNER_TOKEN_CACHE_MAX) {
-    const oldest = ownerTokenByPrivy.keys().next().value;
-    if (oldest === undefined) break;
-    ownerTokenByPrivy.delete(oldest);
-  }
-}
-
-async function exchangePrivyToken(privyToken: string): Promise<string | null> {
-  const now = Date.now();
-  sweep(now);
-  const cached = ownerTokenByPrivy.get(privyToken);
-  if (cached && cached.expiresAt > now) return cached.value;
-  const resp = await fetch(new URL("/auth/session", runtimeCopilotConfig.authBaseUrl), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ privyToken }),
-    cache: "no-store",
-  });
-  if (!resp.ok) return null;
-  const json = (await resp.json()) as { ownerToken?: string };
-  if (!json.ownerToken) return null;
-  ownerTokenByPrivy.set(privyToken, { value: json.ownerToken, expiresAt: Date.now() + 5 * 60_000 });
-  return json.ownerToken;
-}
 
 async function resolveAuthHeader(req: Request): Promise<string | null> {
-  const privyToken = req.headers.get("x-privy-token");
-  if (privyToken) {
-    const ownerToken = await exchangePrivyToken(privyToken);
-    return ownerToken ? `Bearer ${ownerToken}` : null;
-  }
+  const ownerToken = req.headers.get("x-owner-token");
+  if (ownerToken) return `Bearer ${ownerToken}`;
   if (runtimeCopilotConfig.staticToken) return `Bearer ${runtimeCopilotConfig.staticToken}`;
-  if (process.env.NETRUNNERS_DISABLE_DEV_TOKEN === "true") return null;
+  if (process.env.COPILOT_DISABLE_DEV_TOKEN === "true" || process.env.NETRUNNERS_DISABLE_DEV_TOKEN === "true") return null;
   if (cachedDevToken && cachedDevToken.expiresAt > Date.now()) return `Bearer ${cachedDevToken.value}`;
   const tokenUrl = new URL("/auth/dev-token", runtimeCopilotConfig.authBaseUrl);
   tokenUrl.searchParams.set("ownerId", runtimeCopilotConfig.ownerId);
@@ -76,7 +44,7 @@ async function proxy(req: Request, pathParts: string[]): Promise<Response> {
     const authHeader = await resolveAuthHeader(req);
     if (authHeader) upstreamHeaders.set("authorization", authHeader);
   }
-  upstreamHeaders.delete("x-privy-token");
+  upstreamHeaders.delete("x-owner-token");
 
   const method = req.method.toUpperCase();
   const canHaveBody = method !== "GET" && method !== "HEAD";

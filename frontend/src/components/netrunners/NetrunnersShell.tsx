@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { netrunnersGet, netrunnersPost, type ConcurrencyStats, type HealthResponse } from "@/lib/netrunners/api";
-import { NetrunnersAuthBar } from "@/lib/netrunners/privy-auth";
+import { NetrunnersAuthBar } from "@/lib/netrunners/metamask-auth";
 import { connectInjectedWallet, hasInjectedWallet, signWalletMessage, switchOrAddChain, type WalletChain } from "@/lib/wallet/evm";
 
 type TopbarState = {

@@ -1,17 +1,17 @@
 import { COPILOT_PROXY_PREFIX } from "@/lib/copilot/config";
-import { getFreshPrivyToken } from "@/lib/netrunners/privy-token";
+import { getOwnerToken } from "@/lib/netrunners/session";
 
-// Client helpers for the Copilot proxy. A fresh Privy access token is attached as x-privy-token so
-// the proxy can token-exchange it. SSE uses fetch + a stream reader (NOT EventSource, which can't
-// set the auth header).
+// Client helpers for the Copilot proxy. The owner JWT (from MetaMask SIWE) is attached as
+// x-owner-token so the proxy forwards it as a Bearer. SSE uses fetch + a stream reader (NOT
+// EventSource, which can't set the auth header).
 
-async function withPrivy(headers: Record<string, string> = {}): Promise<Record<string, string>> {
-  const tok = await getFreshPrivyToken();
-  return tok ? { ...headers, "x-privy-token": tok } : headers;
+function withAuth(headers: Record<string, string> = {}): Record<string, string> {
+  const tok = getOwnerToken();
+  return tok ? { ...headers, "x-owner-token": tok } : headers;
 }
 
 export async function copilotGet<T>(path: string): Promise<T | null> {
-  const res = await fetch(`${COPILOT_PROXY_PREFIX}${path}`, { headers: await withPrivy(), cache: "no-store" });
+  const res = await fetch(`${COPILOT_PROXY_PREFIX}${path}`, { headers: withAuth(), cache: "no-store" });
   if (!res.ok) return null;
   return (await res.json().catch(() => null)) as T | null;
 }
@@ -19,7 +19,7 @@ export async function copilotGet<T>(path: string): Promise<T | null> {
 export async function copilotPost<T, B = unknown>(path: string, body: B): Promise<T | null> {
   const res = await fetch(`${COPILOT_PROXY_PREFIX}${path}`, {
     method: "POST",
-    headers: await withPrivy({ "Content-Type": "application/json" }),
+    headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -30,7 +30,7 @@ export async function copilotPost<T, B = unknown>(path: string, body: B): Promis
 export async function copilotPut<T, B = unknown>(path: string, body: B): Promise<T | null> {
   const res = await fetch(`${COPILOT_PROXY_PREFIX}${path}`, {
     method: "PUT",
-    headers: await withPrivy({ "Content-Type": "application/json" }),
+    headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -41,7 +41,7 @@ export async function copilotPut<T, B = unknown>(path: string, body: B): Promise
 export async function copilotDelete<T, B = unknown>(path: string, body?: B): Promise<T | null> {
   const res = await fetch(`${COPILOT_PROXY_PREFIX}${path}`, {
     method: "DELETE",
-    headers: await withPrivy({ "Content-Type": "application/json" }),
+    headers: withAuth({ "Content-Type": "application/json" }),
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
@@ -62,7 +62,7 @@ export function streamRun(
 ): { done: Promise<void>; abort: () => void } {
   const controller = new AbortController();
   const done = (async () => {
-    const headers = await withPrivy();
+    const headers = withAuth();
     const res = await fetch(`${COPILOT_PROXY_PREFIX}/stream?runId=${encodeURIComponent(runId)}`, {
       headers,
       signal: controller.signal,

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
-import { createPublicKey, type JsonWebKey as CryptoJwk } from "node:crypto";
+import { createPublicKey, randomBytes, type JsonWebKey as CryptoJwk } from "node:crypto";
 import jwt from "jsonwebtoken";
+import { verifyMessage } from "ethers";
 
 type AuthClaims = {
   sub: string;
@@ -18,6 +19,67 @@ export type PrivyIdentity = {
   email?: string;
   wallet?: string;
 };
+
+// SIWE (EIP-4361) identity. We map the wallet to the SAME shape the /auth/session upsert expects:
+// `did` becomes the stable identity key `siwe:{lowercased address}` so the existing
+// users.privy_did UNIQUE upsert + owner-JWT + revocation machinery is reused byte-for-byte (no
+// schema change, no downstream change). Wallet-only logins have no email — that is already allowed.
+export type SiweIdentity = {
+  did: string;
+  wallet: string;
+  nonce: string;
+};
+
+export class SiweVerificationError extends Error {
+  constructor(public code: string, message?: string) {
+    super(message ?? code);
+  }
+}
+
+// Issue a single-use SIWE nonce (the caller stores it in Redis with a short TTL and consumes it on
+// /auth/session). 16 random bytes hex — alphanumeric, EIP-4361-safe.
+export function makeSiweNonce(): string {
+  return randomBytes(16).toString("hex");
+}
+
+/** Verify an EIP-4361 Sign-In-With-Ethereum message + personal_sign signature. Recovers the signer
+ *  with ethers (already a dependency — no new lib), confirms it matches the address embedded in the
+ *  message, and enforces the optional Expiration Time. Nonce single-use + domain checks are done by
+ *  the caller against Redis. Returns the identity in the shared upsert shape. */
+export function verifySiwe(message: string, signature: string): SiweIdentity {
+  if (typeof message !== "string" || typeof signature !== "string" || !message || !signature) {
+    throw new SiweVerificationError("SIWE_MALFORMED", "message and signature are required");
+  }
+  // Line 2 of an EIP-4361 message is the address.
+  const lines = message.split("\n");
+  const claimed = (lines[1] ?? "").trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(claimed)) {
+    throw new SiweVerificationError("SIWE_MALFORMED", "message missing address on line 2");
+  }
+  const nonceMatch = message.match(/^Nonce:\s*(\S+)\s*$/m);
+  if (!nonceMatch) throw new SiweVerificationError("SIWE_MALFORMED", "message missing Nonce");
+  const expMatch = message.match(/^Expiration Time:\s*(\S+)\s*$/m);
+  if (expMatch) {
+    const exp = Date.parse(expMatch[1]);
+    if (Number.isFinite(exp) && exp < Date.now()) {
+      throw new SiweVerificationError("SIWE_EXPIRED", "sign-in message expired");
+    }
+  }
+  let recovered: string;
+  try {
+    recovered = verifyMessage(message, signature); // EIP-191 personal_sign recover
+  } catch (e) {
+    throw new SiweVerificationError("SIWE_BAD_SIGNATURE", (e as Error).message);
+  }
+  if (recovered.toLowerCase() !== claimed.toLowerCase()) {
+    throw new SiweVerificationError("SIWE_BAD_SIGNATURE", "recovered signer != message address");
+  }
+  return {
+    did: `siwe:${recovered.toLowerCase()}`,
+    wallet: recovered, // ethers returns a checksummed address
+    nonce: nonceMatch[1],
+  };
+}
 
 declare global {
   namespace Express {
@@ -39,7 +101,9 @@ const publicApiPaths = new Set<string>([
   "/health",
   "/metrics",
   "/auth/dev-token",
-  "/auth/session",   // Privy token-exchange (verifies the Privy ES256 token itself)
+  "/auth/nonce",     // SIWE nonce issuance (no auth — precedes sign-in)
+  "/auth/session",   // SIWE verify (verifies the EIP-4361 message + signature itself)
+  "/webhooks/1shot", // 1Shot relayer status webhook (verified by payload reconciliation, not owner auth)
   "/api/templates",
   "/api/strategies/registry",
 ]);

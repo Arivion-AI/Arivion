@@ -5,6 +5,9 @@ import { z } from "zod";
 import { DUALITY_CHAIN_IDS, realTraderEnabled } from "../config/chains.js";
 import { requireOwnerId } from "../lib/auth.js";
 import { db } from "../lib/db.js";
+import { agentWalletKey } from "../lib/agentExec.js";
+import { executeGmxViaOneShot } from "../lib/gmxOneShotExec.js";
+import { smartAccountExecEnabled } from "../lib/smartAccountExec.js";
 
 const requireCjs = createRequire(import.meta.url);
 const GMX_CHAIN_ID = DUALITY_CHAIN_IDS.arbitrumOne;
@@ -100,6 +103,52 @@ function bigintJson(value: unknown): unknown {
   return value;
 }
 
+// --- USDC + relay-router allowance helpers ---------------------------------------------------------
+// GMX express relays the order: the Gelato relay router transferFroms the USDC collateral + relayer fee
+// straight from the wallet. A fresh wallet has no allowance and the SDK attaches no permit
+// (tokenPermits: []), so the relay reverts. We pre-approve USDC to the discovered relay router once.
+const USDC_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"; // native USDC on Arbitrum One
+const MAX_UINT256 = (1n << 256n) - 1n;
+// Minimal viem chain object so PrivateKeySigner.sendTransaction (used only for the approval) works.
+const ARBITRUM_ONE_CHAIN = {
+  id: GMX_CHAIN_ID,
+  name: "Arbitrum One",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: [process.env.ARBITRUM_ONE_RPC_URL ?? ""] } },
+};
+
+async function arbRpc(method: string, params: unknown[]): Promise<unknown> {
+  const url = process.env.ARBITRUM_ONE_RPC_URL;
+  if (!url) throw new Error("ARBITRUM_ONE_RPC_URL not set");
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const j = (await r.json()) as { result?: unknown; error?: { message?: string } };
+  if (j.error) throw new Error(`${method}: ${j.error.message ?? "rpc error"}`);
+  return j.result ?? null;
+}
+
+async function erc20Allowance(token: string, owner: string, spender: string): Promise<bigint> {
+  const data = "0xdd62ed3e" + owner.slice(2).toLowerCase().padStart(64, "0") + spender.slice(2).toLowerCase().padStart(64, "0");
+  const res = (await arbRpc("eth_call", [{ to: token, data }, "latest"])) as string | null;
+  return BigInt(res ?? "0x0");
+}
+
+async function waitForApproval(txHash: string, timeoutMs = 30000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const rc = (await arbRpc("eth_getTransactionReceipt", [txHash])) as { status?: string } | null;
+    if (rc && rc.status) {
+      if (rc.status === "0x1") return;
+      throw new Error(`USDC approval reverted (${txHash})`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  throw new Error(`USDC approval not mined within ${timeoutMs}ms (${txHash})`);
+}
+
 function marketBase(symbol: string): string {
   return symbol
     .replace(/\[[^\]]+\]/g, "")
@@ -112,9 +161,9 @@ function marketBase(symbol: string): string {
 function policyFor(ticket?: PreparedTicket): LaunchPolicy {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const requiredEnv = ["DUALITY_ENABLE_REAL_TRADER=true", "AGENT_GMX_PRIVATE_KEY"];
+  const requiredEnv = ["DUALITY_ENABLE_REAL_TRADER=true"];
   if (!realTraderEnabled()) errors.push("REAL_TRADER_DISABLED");
-  if (!process.env.AGENT_GMX_PRIVATE_KEY) errors.push("AGENT_GMX_PRIVATE_KEY_MISSING");
+  // Signing uses the owner's per-user agent wallet (created on demand), so no shared key is required.
   if (ticket) {
     if (ticket.collateralUsd > MAX_COLLATERAL_USD) errors.push("COLLATERAL_ABOVE_GMX_MAX_COLLATERAL_USD");
     if (ticket.leverage > MAX_LEVERAGE) errors.push("LEVERAGE_ABOVE_GMX_MAX_LEVERAGE");
@@ -123,7 +172,7 @@ function policyFor(ticket?: PreparedTicket): LaunchPolicy {
     if (ticket.leverage > 1.5) warnings.push("LEVERAGE_RISK_REVIEW_REQUIRED");
   }
   return {
-    canPrepare: !ticket || errors.filter((e) => !["REAL_TRADER_DISABLED", "AGENT_GMX_PRIVATE_KEY_MISSING"].includes(e)).length === 0,
+    canPrepare: !ticket || errors.filter((e) => !["REAL_TRADER_DISABLED"].includes(e)).length === 0,
     canSubmit: errors.length === 0,
     errors,
     warnings,
@@ -220,17 +269,39 @@ async function sdkClient() {
   return new GmxApiSdk({ chainId: GMX_CHAIN_ID });
 }
 
-async function resolveCanonicalSymbol(rawSymbol: string): Promise<string> {
+// Resolve a (possibly bare, e.g. "ETH") symbol to a canonical GMX market label. CRITICAL: we always
+// pay USDC collateral (buildTicket hard-codes collateralToken="USDC"), and GMX rejects an order whose
+// market does not list the paid collateral among its tokens ("Collateral token must be one of the
+// market's tokens..."). Several bases have multiple markets (e.g. ETH/USD has [WSTETH-USDE],
+// [WETH-USDC], [WETH-WETH]); a naive first-match picks an exotic non-USDC pool and every launch fails.
+// So we prefer the market whose bracketed token pair includes the collateral token.
+async function resolveCanonicalSymbol(rawSymbol: string, collateral = "USDC"): Promise<string> {
   const symbol = rawSymbol.trim();
-  if (symbol.includes("/USD") && symbol.includes("[")) return symbol;
+  const coll = collateral.toUpperCase();
+  const acceptsCollateral = (s: string) => (s.toUpperCase().match(/\[([^\]]+)\]/)?.[1] ?? "").includes(coll);
+  // Keep a fully-qualified market only if it already accepts the collateral we pay.
+  if (symbol.includes("/USD") && symbol.includes("[") && acceptsCollateral(symbol)) return symbol;
   const base = marketBase(symbol);
   const sdk = await sdkClient();
   const markets = (await sdk.fetchMarkets()) as Array<Record<string, unknown>>;
-  const match = markets.find((m) => {
-    const s = String(m.symbol ?? "").toUpperCase();
-    return s.startsWith(`${base}/USD`) && m.isSpotOnly !== true;
-  }) ?? markets.find((m) => String(m.symbol ?? "").toUpperCase().includes(`${base}/USD`));
+  const byBase = markets.filter((m) => String(m.symbol ?? "").toUpperCase().startsWith(`${base}/USD`) && m.isSpotOnly !== true);
+  const match =
+    byBase.find((m) => acceptsCollateral(String(m.symbol ?? ""))) ?? // prefer the USDC-collateral market
+    byBase[0] ??
+    markets.find((m) => String(m.symbol ?? "").toUpperCase().includes(`${base}/USD`));
   return String(match?.symbol ?? `${base}/USD`);
+}
+
+// Resolve a canonical market symbol (e.g. "ETH/USD [WETH-USDC]") to its GM marketToken address, needed
+// by the onchain GMX→1Shot adapter (which addresses markets by token address, not symbol).
+async function resolveMarketAddress(canonicalSymbol: string): Promise<string | null> {
+  const sdk = await sdkClient();
+  const markets = (await sdk.fetchMarkets()) as Array<Record<string, unknown>>;
+  const want = canonicalSymbol.trim().toUpperCase();
+  const m = markets.find((x) => String(x.symbol ?? "").toUpperCase() === want)
+    ?? markets.find((x) => String(x.symbol ?? "").toUpperCase().startsWith(want.split(" ")[0]) && /\[[^\]]*USDC[^\]]*\]/i.test(String(x.symbol ?? "")));
+  const addr = m?.marketTokenAddress ?? m?.marketToken ?? m?.address;
+  return addr ? String(addr) : null;
 }
 
 async function marketRows(limit: number, q = ""): Promise<Array<Record<string, unknown>>> {
@@ -264,7 +335,7 @@ export function createGmxRouter(): express.Router {
         policy: policyFor(),
         truth: {
           data_source: "@gmx-io/sdk/v2 fetchMarkets + fetchMarketsTickers",
-          can_execute_real_money: realTraderEnabled() && Boolean(process.env.AGENT_GMX_PRIVATE_KEY),
+          can_execute_real_money: realTraderEnabled(),
         },
       });
     } catch (error) {
@@ -289,6 +360,21 @@ export function createGmxRouter(): express.Router {
       res.json(bigintJson({ chainId: GMX_CHAIN_ID, address, positions, orders, trades, balances, source: "gmx_sdk_v2" }));
     } catch (error) {
       res.status(502).json({ error: "GMX_ACCOUNT_FAILED", detail: (error as Error).message });
+    }
+  });
+
+  // Candlestick OHLCV for the inspect chart. Accepts a bare base ("BTC") or canonical market label.
+  router.get("/api/gmx/live/ohlcv", async (req, res) => {
+    try {
+      const raw = typeof req.query.symbol === "string" && req.query.symbol.trim() ? req.query.symbol.trim() : "BTC";
+      const symbol = marketBase(raw) || raw; // fetchOhlcv takes the index token base (e.g. "BTC")
+      const timeframe = typeof req.query.timeframe === "string" ? req.query.timeframe : "1h";
+      const limit = Math.min(Math.max(Number(req.query.limit ?? 200) || 200, 10), 1000);
+      const sdk = await sdkClient();
+      const candles = await sdk.fetchOhlcv({ symbol, timeframe, limit });
+      res.json(bigintJson({ symbol, timeframe, candles }));
+    } catch (error) {
+      res.status(502).json({ error: "GMX_OHLCV_FAILED", detail: (error as Error).message });
     }
   });
 
@@ -352,11 +438,75 @@ export function createGmxRouter(): express.Router {
         res.status(403).json(bigintJson({ ok: false, error: "GMX_LIVE_BLOCKED", ticket, policy }));
         return;
       }
+      // Smart-account / 1Shot execution path (flag-gated). We capture the EXACT GMX ExchangeRouter
+      // .multicall calldata the SDK would broadcast (via gmxOneShotExec's SDK interception) and relay it
+      // through 1Shot as an EIP-7710 delegated execution under a FunctionCall-scoped delegation — gas in
+      // USDC. Proven live on mainnet (see GMX_TO_1SHOT.md, tx 0x772bcc8…36c8). Requires the agent wallet
+      // to hold the USDC collateral + a little ETH (GMX's native keeper execution fee) + USDC approval to
+      // the GMX Router (ensured below). When the flag is off, the native Gelato express path runs.
+      if (smartAccountExecEnabled()) {
+        const marketAddress = await resolveMarketAddress(canonical);
+        if (!marketAddress) {
+          res.status(409).json(bigintJson({ ok: false, error: "GMX_MARKET_UNRESOLVED", detail: `Could not resolve a USDC-collateral market for ${canonical}.`, ticket, policy }));
+          return;
+        }
+        const r = await executeGmxViaOneShot({
+          ownerId,
+          marketAddress: marketAddress as `0x${string}`,
+          collateralUsd: ticket.collateralUsd,
+          leverageBps: Math.round(ticket.leverage * 10000),
+          isLong: ticket.direction !== "short",
+        });
+        if (!r.ok) {
+          res.status(502).json(bigintJson({ ok: false, error: "GMX_1SHOT_FAILED", detail: r.error, ticket, policy }));
+          return;
+        }
+        await db.query(
+          `INSERT INTO agent_gmx_live_orders
+             (id, owner_id, chain_id, account, request_id, status, symbol, strategy_id, bot_type,
+              direction, collateral_usd, leverage, size_usd, ticket, submitted)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15::jsonb)`,
+          [
+            `gmx_1shot_${randomUUID()}`, ownerId, GMX_CHAIN_ID, r.exchangeRouter, r.taskId, "relayed",
+            ticket.symbol, ticket.strategyId ?? null, ticket.botType ?? null, ticket.direction,
+            ticket.collateralUsd, ticket.leverage, ticket.sizeUsd,
+            JSON.stringify(bigintJson(ticket)), JSON.stringify({ via: "1shot", taskId: r.taskId, exchangeRouter: r.exchangeRouter, executionFeeWei: r.executionFeeWei, feeUsdc: r.feeUsdc }),
+          ],
+        );
+        res.json(bigintJson({
+          ok: true, ownerId, chainId: GMX_CHAIN_ID, account: r.exchangeRouter, taskId: r.taskId, status: "relayed", ticket, policy,
+          truth: { result_tier: "GMX_MAINNET_RELAYED_1SHOT", venue: "gmx_v2", can_execute_real_money: true, source: "gmxOneShotExec → 1Shot relayer (EIP-7710, gas in USDC)", feeUsdc: r.feeUsdc },
+        }));
+        return;
+      }
       const { GmxApiSdk, PrivateKeySigner } = getSdk();
-      const privateKey = String(process.env.AGENT_GMX_PRIVATE_KEY ?? "");
+      // Sign with the owner's own agent wallet (same account they fund) — not a shared backend key.
+      const { privateKey } = await agentWalletKey(ownerId);
       const sdk = new GmxApiSdk({ chainId: GMX_CHAIN_ID });
-      const signer = new PrivateKeySigner(privateKey);
+      // rpcUrl + chain are required so the one-time on-chain USDC approval below can be sent.
+      const signer = new PrivateKeySigner(privateKey, { rpcUrl: process.env.ARBITRUM_ONE_RPC_URL, chain: ARBITRUM_ONE_CHAIN });
       ticket.request.from = signer.address;
+      // GMX v2 pulls collateral via its Router (plugin-transfer): the wallet must approve the canonical
+      // GMX Router, NOT the Gelato relay router. buildApproveTransaction(spender:"router") encodes
+      // approve(router, amount); we extract that router address and ensure a one-time max approval.
+      const approveTpl = (await sdk.buildApproveTransaction({
+        tokenAddress: USDC_ADDRESS,
+        spender: "router",
+        amount: MAX_UINT256,
+      })) as { to: string; data: string };
+      const gmxRouter = ("0x" + String(approveTpl.data).slice(34, 74)).toLowerCase();
+      if (gmxRouter.length === 42) {
+        const needed = parseAmountUnits(ticket.collateralUsd + 5, USDC_DECIMALS); // collateral + fee headroom
+        const current = await erc20Allowance(USDC_ADDRESS, signer.address, gmxRouter);
+        if (current < needed) {
+          const approvalTx = (await sdk.executeErc20Approve(signer, {
+            tokenAddress: USDC_ADDRESS,
+            spender: gmxRouter,
+            amount: MAX_UINT256,
+          })) as unknown as string;
+          await waitForApproval(approvalTx);
+        }
+      }
       const submitted = await sdk.executeExpressOrder(ticket.request, signer);
       const requestId = (submitted as Record<string, unknown>)?.requestId;
       const status = String((submitted as Record<string, unknown>)?.status ?? "submitted");
@@ -400,6 +550,7 @@ export function createGmxRouter(): express.Router {
         },
       }));
     } catch (error) {
+      console.error("[gmx/live/launch] failed:", (error as Error)?.message, "|", (error as Error)?.stack?.split("\n").slice(0, 3).join(" | "));
       res.status(502).json({ ok: false, error: "GMX_LAUNCH_FAILED", detail: (error as Error).message });
     }
   });
@@ -449,7 +600,8 @@ export function createGmxRouter(): express.Router {
       const direction = row.direction === "short" ? "short" : "long";
       const { GmxApiSdk, PrivateKeySigner } = getSdk();
       const sdk = new GmxApiSdk({ chainId: GMX_CHAIN_ID });
-      const signer = new PrivateKeySigner(String(process.env.AGENT_GMX_PRIVATE_KEY ?? ""));
+      const { privateKey: closeKey } = await agentWalletKey(ownerId);
+      const signer = new PrivateKeySigner(closeKey);
 
       // 2. Read the live position so we close the real on-chain size, not the ledger's notional.
       const base = marketBase(row.symbol);

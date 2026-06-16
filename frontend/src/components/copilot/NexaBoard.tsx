@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useRef, useState, useLayoutEffect, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent, type MouseEvent as ReactMouseEvent, type ReactNode, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { TokenIcon } from "@/components/netrunners/TokenIcon";
 
 // The center "trading setup" board: agent activity becomes a flowchart of sleek widgets connected by
@@ -1731,17 +1732,23 @@ export default function NexaBoard({ widgets, focusWidgetId, onEditAllocation, on
           </Fragment>
         ))}
       </div>
-      {open && meta ? (
-        <div className="nx-modal-back" onClick={() => setOpen(null)}>
-          <div className="nx-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="nx-modal-head">
-              <span className="nx-w-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{meta.icon}</svg></span>
-              <div><div className="nx-modal-title">{open.title}</div><div className="nx-w-kind">{meta.label} · {open.state}</div></div>
-              <button className="nx-modal-x" onClick={() => setOpen(null)} aria-label="Close">✕</button>
+      {open && meta && typeof document !== "undefined" ? createPortal(
+        // Portal to <body> so the fixed modal escapes the .nx-board stacking context (z-index:3) that
+        // otherwise traps it under the Nexa Analyze / Save floating buttons. The `nexa` wrapper with
+        // display:contents carries the theme CSS variables without adding any box/layout.
+        <div className="nexa" style={{ display: "contents" }}>
+          <div className="nx-modal-back" onClick={() => setOpen(null)}>
+            <div className="nx-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="nx-modal-head">
+                <span className="nx-w-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{meta.icon}</svg></span>
+                <div><div className="nx-modal-title">{open.title}</div><div className="nx-w-kind">{meta.label} · {open.state}</div></div>
+                <button className="nx-modal-x" onClick={() => setOpen(null)} aria-label="Close">✕</button>
+              </div>
+              <div className="nx-modal-body"><WidgetDetail w={open} /></div>
             </div>
-            <div className="nx-modal-body"><WidgetDetail w={open} /></div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

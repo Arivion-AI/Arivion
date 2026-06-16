@@ -27,6 +27,8 @@ export function isConfigured(provider: string): boolean {
       return Boolean(config.openaiApiKey || config.litellmProxyUrl);
     case "anthropic":
       return Boolean(config.anthropicApiKey || config.litellmProxyUrl);
+    case "venice":
+      return Boolean(config.veniceApiKey);
     default:
       return false;
   }

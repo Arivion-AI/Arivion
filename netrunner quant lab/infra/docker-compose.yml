@@ -1,18 +1,4 @@
 services:
-  web:
-    build:
-      context: ..
-      dockerfile: apps/web/Dockerfile
-    ports:
-      - "3300:3000"
-    environment:
-      API_URL: http://api:4000
-      PUBLIC_API_URL: http://localhost:4400
-      WEB_PORT: 3000
-    depends_on:
-      api:
-        condition: service_started
-
   api:
     build:
       context: ..

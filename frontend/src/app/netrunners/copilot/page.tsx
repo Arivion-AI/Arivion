@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { createPortal } from "react-dom";
+import { createPublicClient, http, formatUnits, parseAbi, getAddress, type Chain } from "viem";
+import { arbitrum, base } from "viem/chains";
 import { Archivo, Chakra_Petch, Orbitron, Share_Tech_Mono } from "next/font/google";
 import "./nexa.css";
+import "../netrunners.css"; // StockMarketsTerminal (embedded Markets view) styles — needed on the root "/" route too
 import { copilotGet, copilotPost, copilotDelete, streamRun, type CopilotEvent, type ThreadResponse } from "@/lib/copilot/api";
 import {
   fmtPct,
@@ -13,17 +16,20 @@ import {
   netrunnersPost,
   netrunnersPostResult,
   seriesToPoints,
+  type CandleBar,
   type PaperRuntimeResult,
   type PortfolioResult,
 } from "@/lib/netrunners/api";
 import GlobeCloud from "@/components/copilot/GlobeCloud";
 import NexaBoard, { PHASE_DEFS, phaseOf, type BoardWidget, type WidgetKind } from "@/components/copilot/NexaBoard";
 import PortfolioPanel from "@/components/copilot/PortfolioPanel";
+import StrategyExecute from "@/components/copilot/StrategyExecute";
 import { StockMarketsTerminal } from "@/components/netrunners/StockMarketsTerminal";
+import { CandleChart } from "@/components/netrunners/CandleChart";
 import { BacktestReportModal } from "@/components/copilot/BacktestReportModal";
 import { TokenIcon, splitSymbol } from "@/components/netrunners/TokenIcon";
-import { netrunnersFetch } from "@/lib/netrunners/privy-auth";
-import { registerPrivyTokenFetcher, setPrivyToken } from "@/lib/netrunners/privy-token";
+import { isWalletRuntimeAvailable, useNetrunnersAuth } from "@/lib/netrunners/metamask-auth";
+import { listDelegations, type DelegationRow } from "@/lib/wallet/smart-account";
 
 // ---- Nexa: three-pane agentic console. Left nav · center board (globe → flowchart of widgets) ·
 // right conversation. Agent activity (run.step / truth_card SSE) becomes draggable board widgets.
@@ -35,7 +41,7 @@ type AgentWalletInfo = {
   address: string; chainId: number; ethBalanceRh: string; ethBalanceArb: string;
   tokens?: { robinhood?: { mockUsdG?: string }; arbitrumSepolia?: { dUSDC?: string; dWETH?: string } };
 };
-type WalletSession = { ready: boolean; authenticated: boolean; label: string | null };
+type WalletSession = { ready: boolean; authenticated: boolean; label: string | null; walletAddress?: string | null };
 
 const chakraPetch = Chakra_Petch({
   subsets: ["latin"],
@@ -78,17 +84,56 @@ const SUGGESTIONS = [
 
 const RH_CHAIN_ID = 46630;
 const ARB_SEPOLIA_CHAIN_ID = 421614;
-const PRIVY_ENABLED = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
+// MetaMask SIWE needs no build-time app id — auth availability is a pure runtime check
+// (isWalletRuntimeAvailable: HTTPS + injected wallet). Kept as a const so the gating UI reads cleanly.
+const WALLET_CONFIGURED = true;
 const COPILOT_THREAD_KEY = "duality:nexa:thread";
 
 function shortAddr(addr: string): string {
   return addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
 }
 
+const ARB_ONE_CHAIN_ID = 42161;
+const BASE_CHAIN_ID = 8453;
+// Execution chains for the live (mainnet) flow — the wallet widget reads live USDC/ETH on these.
+const EXEC_CHAINS: { id: number; label: string; viem: Chain; usdc: `0x${string}` }[] = [
+  { id: ARB_ONE_CHAIN_ID, label: "Arbitrum One", viem: arbitrum, usdc: getAddress("0xaf88d065e77c8cC2239327C5EDb3A432268e5831") },
+  { id: BASE_CHAIN_ID, label: "Base", viem: base, usdc: getAddress("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913") },
+];
+const ERC20_BAL = parseAbi(["function balanceOf(address) view returns (uint256)"]);
+function explorerBase(chainId: number): string {
+  if (chainId === ARB_ONE_CHAIN_ID) return "https://arbiscan.io";
+  if (chainId === BASE_CHAIN_ID) return "https://basescan.org";
+  if (chainId === ARB_SEPOLIA_CHAIN_ID) return "https://sepolia.arbiscan.io";
+  if (chainId === RH_CHAIN_ID) return "https://explorer.testnet.chain.robinhood.com";
+  return "https://etherscan.io";
+}
+
+// Live USDC + native balance for an address on one exec chain. Read-only; never blocks render.
+function useChainBalance(address: string | null, chainId: number, open: boolean) {
+  const [bal, setBal] = useState<{ usdc: number; eth: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!open || !address) { setBal(null); return; }
+    const cfg = EXEC_CHAINS.find((c) => c.id === chainId);
+    if (!cfg) { setBal(null); return; }
+    let cancelled = false;
+    setLoading(true);
+    const pc = createPublicClient({ chain: cfg.viem, transport: http() });
+    const addr = getAddress(address);
+    Promise.all([
+      pc.readContract({ address: cfg.usdc, abi: ERC20_BAL, functionName: "balanceOf", args: [addr] }).then((b) => Number(formatUnits(b as bigint, 6))).catch(() => 0),
+      pc.getBalance({ address: addr }).then((b) => Number(formatUnits(b, 18))).catch(() => 0),
+    ]).then(([usdc, eth]) => { if (!cancelled) setBal({ usdc, eth }); }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [address, chainId, open]);
+  return { bal, loading };
+}
 function explorerUrl(chainId: number, address: string): string {
-  if (chainId === ARB_SEPOLIA_CHAIN_ID) return `https://sepolia.arbiscan.io/address/${address}`;
-  if (chainId === RH_CHAIN_ID) return `https://explorer.testnet.chain.robinhood.com/address/${address}`;
-  return `https://etherscan.io/address/${address}`;
+  return `${explorerBase(chainId)}/address/${address}`;
+}
+function explorerTxUrl(chainId: number, hash: string): string {
+  return `${explorerBase(chainId)}/tx/${hash}`;
 }
 
 // Multiasset elicitation is the AGENT's job now (it asks risk → duration → markets via ask_user, one
@@ -151,6 +196,7 @@ const QUANTS_TABS: Array<{ id: LabTab; label: string; desc: string; prompt: stri
   { id: "bots", label: "Bot OS", desc: "Configure paper bots for GMX logic, LP monitoring and stock holds.", prompt: "Design Bot OS rules for the current GMX strategy, LP sleeve and stock sleeve. Use paper/testnet only and show risk controls." },
   { id: "portfolio", label: "Portfolio", desc: "Compose allocations across GMX trading, LP and Robinhood stocks.", prompt: "Build a multiasset portfolio for $500 using GMX trading, LP exposure and Robinhood stocks. Show all three sleeves no matter what." },
   { id: "optimizer", label: "Optimizer", desc: "Sweep weights, rebalance thresholds and drawdown gates.", prompt: "Optimize the current GMX + LP + stock portfolio. Sweep rebalance thresholds and report return, Sharpe, max drawdown and rebalances." },
+  { id: "paper", label: "Live Ticket", desc: "Arm, prepare and broadcast a GMX v2 live order on Arbitrum One.", prompt: "Walk me through the GMX live ticket: explain collateral caps, leverage and the risks before I broadcast a mainnet order." },
   { id: "data", label: "Data", desc: "Inspect candles, GMX market data, Dune, pools and stock quotes.", prompt: "Audit data coverage for GMX, LP pools, Dune analytics and Robinhood stocks. Show missing sources honestly." },
   { id: "runs", label: "Run History", desc: "Review backtests, truth cards and published strategy evidence.", prompt: "Summarize recent strategy runs, truth cards, metrics and what should be improved next." },
 ] as const;
@@ -640,6 +686,7 @@ function QuantsLabPanel({
   const [liveBusy, setLiveBusy] = useState(false);
   const [liveOrders, setLiveOrders] = useState<GmxLiveOrder[]>([]);
   const [liveMonitorAddress, setLiveMonitorAddress] = useState("");
+  const liveTicketRef = useRef<HTMLDivElement | null>(null);
   const [liveAccount, setLiveAccount] = useState<GmxAccountResponse | null>(null);
   const [liveStopResult, setLiveStopResult] = useState<Record<string, unknown> | null>(null);
 
@@ -989,27 +1036,34 @@ function QuantsLabPanel({
     };
   }
 
+  // Arm the IN-PANEL GMX Live Ticket (Prepare → Broadcast) from a strategy/bot, then scroll to it.
+  // (Previously this navigated to the monitor-only Live Trading panel, which has no order form.)
+  function armLiveTicket(opts: { symbol: string; direction: GmxDirection; strategyId: string; botType?: string; leverage?: number; source: LiveDraft["source"] }) {
+    setLiveSymbol(opts.symbol);
+    setLiveDirection(opts.direction);
+    setLiveStrategyId(opts.strategyId);
+    setLiveBotType(opts.botType ?? "none");
+    if (opts.leverage && opts.leverage > 0) setLiveLeverage(String(opts.leverage));
+    setLiveCollateralUsd("5"); // matches the funded amount; user adjusts within the cap
+    setLivePrepare(null);
+    setLiveLaunch(null);
+    setLiveStatus(`Live ticket armed (${opts.symbol} ${opts.direction}). Set collateral ≤ cap, then Prepare → Broadcast.`);
+    onSelect("paper"); // switch to the GMX Live Ticket sub-tab (where Prepare/Broadcast live)
+    onOpenLiveDraft({ symbol: opts.symbol, strategyId: opts.strategyId, botType: opts.botType, direction: opts.direction, source: opts.source });
+    setTimeout(() => liveTicketRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  }
+
   function armLiveFromStrategy() {
     const lastFill = [...(strategyResult?.fills ?? [])].reverse().find((f) => f.side);
-    const inferred = String(lastFill?.side ?? "").toLowerCase().includes("sell") ? "short" : "long";
-    onOpenLiveDraft({
-      symbol: strategySymbol.toUpperCase(),
-      strategyId: selectedStrategy?.id ?? strategyId,
-      direction: inferred,
-      source: "strategy",
-    });
+    const inferred: GmxDirection = String(lastFill?.side ?? "").toLowerCase().includes("sell") ? "short" : "long";
+    armLiveTicket({ symbol: strategySymbol.toUpperCase(), strategyId: selectedStrategy?.id ?? strategyId, direction: inferred, source: "strategy" });
   }
 
   function armLiveFromBot() {
     const params = buildBotParams();
     const symbol = String(params.symbol ?? params.perp_symbol ?? strategySymbol).toUpperCase();
-    onOpenLiveDraft({
-      symbol,
-      strategyId: strategyForBot(botType),
-      botType: botType || "custom_bot",
-      direction: String(params.side ?? params.direction ?? "").toLowerCase().includes("short") ? "short" : "long",
-      source: "bot-os",
-    });
+    const dir: GmxDirection = String(params.side ?? params.direction ?? "").toLowerCase().includes("short") ? "short" : "long";
+    armLiveTicket({ symbol, strategyId: strategyForBot(botType), botType: botType || "custom_bot", direction: dir, leverage: Number(params.leverage) || undefined, source: "bot-os" });
   }
 
   async function prepareLiveTicket() {
@@ -1088,7 +1142,7 @@ function QuantsLabPanel({
     <div className="nx-quants-panel">
       <div className="nx-quants-eyebrow"><b /> GMX + Stocks Configurable Lab</div>
       <h2>{current.label}</h2>
-      <p>{current.desc} Configure by hand, run the quant engine directly, then ask Nexa to explain or iterate.</p>
+      <p>{current.desc} Configure by hand, run the quant engine directly, then ask Arivion to explain or iterate.</p>
       <div className="nx-quants-tabs">
         {QUANTS_TABS.map((tab) => <button key={tab.id} className={active === tab.id ? "on" : ""} onClick={() => onSelect(tab.id)}>{tab.label}</button>)}
       </div>
@@ -1112,7 +1166,7 @@ function QuantsLabPanel({
             <p>Dune belongs on the board as a provenance widget. If the query/key is missing, it should say so instead of pretending.</p>
           </div>
           <div className="nx-lab-card">
-            <div className="nx-lab-card-head"><span>Ask Nexa</span><button onClick={() => onRun(current.prompt)}>Analyze Lab</button></div>
+            <div className="nx-lab-card-head"><span>Ask Arivion</span><button onClick={() => onRun(current.prompt)}>Analyze Lab</button></div>
             <p>Use the AI for explanation and iteration after the manual run has produced real outputs.</p>
           </div>
         </div>
@@ -1148,7 +1202,7 @@ function QuantsLabPanel({
             <MiniCurve values={strategyResult?.equity_curve} />
             <button className="nx-lab-detail-btn" disabled={!strategyResult} onClick={() => setReportTarget("strategy")}>View Detailed Backtest →</button>
             <div className="nx-lab-actions">
-              <button className="nx-lab-ghost" onClick={() => onRun(`Review this GMX backtest result and suggest parameter changes: ${strategyStatus}`)}>Ask Nexa to Improve</button>
+              <button className="nx-lab-ghost" onClick={() => onRun(`Review this GMX backtest result and suggest parameter changes: ${strategyStatus}`)}>Ask Arivion to Improve</button>
               <button className="nx-lab-primary" disabled={!strategyResult} onClick={armLiveFromStrategy}>Open Live Ticket</button>
             </div>
           </div>
@@ -1246,7 +1300,7 @@ function QuantsLabPanel({
 
       {active === "paper" ? (
         <div className="nx-lab-grid live">
-          <div className="nx-lab-card wide">
+          <div className="nx-lab-card wide" ref={liveTicketRef}>
             <div className="nx-lab-card-head"><span>GMX Live Ticket</span><div><button disabled={liveBusy} onClick={prepareLiveTicket}>Prepare</button><button disabled={liveBusy || liveConfirm !== "LAUNCH_GMX_MAINNET"} onClick={launchLiveTicket}>Broadcast</button></div></div>
             <div className="nx-live-ribbon">
               <span>Arbitrum One</span>
@@ -1278,7 +1332,7 @@ function QuantsLabPanel({
             </div>
           </div>
           <div className="nx-lab-card">
-            <div className="nx-lab-card-head"><span>Prepared Request</span><button onClick={() => onRun(`Review this GMX live ticket and explain the risks before launch: ${JSON.stringify(livePrepare?.ticket ?? livePayload()).slice(0, 1200)}`)}>Ask Nexa</button></div>
+            <div className="nx-lab-card-head"><span>Prepared Request</span><button onClick={() => onRun(`Review this GMX live ticket and explain the risks before launch: ${JSON.stringify(livePrepare?.ticket ?? livePayload()).slice(0, 1200)}`)}>Ask Arivion</button></div>
             <pre className="nx-live-code">{livePrepare?.ticket ? JSON.stringify(livePrepare.ticket, null, 2) : "No prepared ticket yet."}</pre>
           </div>
           <div className="nx-lab-card wide">
@@ -1313,8 +1367,8 @@ function QuantsLabPanel({
       {active === "runs" ? (
         <div className="nx-lab-grid">
           <div className="nx-lab-card wide">
-            <div className="nx-lab-card-head"><span>Run Review</span><button onClick={() => onRun(current.prompt)}>Ask Nexa</button></div>
-            <p>Recent direct-run outputs stay in each lab tab. Ask Nexa to summarize evidence and next parameter changes.</p>
+            <div className="nx-lab-card-head"><span>Run Review</span><button onClick={() => onRun(current.prompt)}>Ask Arivion</button></div>
+            <p>Recent direct-run outputs stay in each lab tab. Ask Arivion to summarize evidence and next parameter changes.</p>
             <div className="nx-quants-grid">
               <div className="nx-quants-card"><span>Strategy</span><strong>{strategyPerf ? metric(strategyPerf.total_return, true) : "--"}</strong><em>{strategyStatus}</em></div>
               <div className="nx-quants-card"><span>Bot</span><strong>{cockpit?.risk_class ?? "--"}</strong><em>{botStatus}</em></div>
@@ -1361,6 +1415,157 @@ function QuantsLabPanel({
 
 type LiveTab = "running" | "account" | "risk";
 
+// --- GMX inspect modal: detailed position + PnL + fills + explorer links for one live launch -------
+// GMX SDK fixed-point: USD values and ApiPositionInfo prices are scaled by 1e30; USDC amounts by 1e6.
+function gmxNum(v: unknown, decimals: number): number {
+  const n = Number(String(v ?? "0"));
+  return Number.isFinite(n) ? n / Math.pow(10, decimals) : 0;
+}
+function fmtPriceUsd(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  return `$${n.toLocaleString(undefined, { maximumFractionDigits: n >= 1000 ? 2 : 4 })}`;
+}
+function fmtSignedUsd(n: number): string {
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+  return `${sign}$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: Math.abs(n) < 1 ? 4 : 2 })}`;
+}
+type GmxStatusResp = { requestId?: string; status?: Record<string, unknown> };
+
+function GmxInspectModal({ order, chainId, onClose, onRun }: {
+  order: GmxLiveOrder; chainId: number; onClose: () => void; onRun: (prompt: string) => void;
+}) {
+  const [account, setAccount] = useState<GmxAccountResponse | null>(null);
+  const [statusResp, setStatusResp] = useState<GmxStatusResp | null>(null);
+  const [bars, setBars] = useState<CandleBar[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chartErr, setChartErr] = useState("");
+
+  const base = useMemo(() => String(order.symbol ?? "").split("/")[0].trim() || "BTC", [order.symbol]);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    const tasks: Promise<unknown>[] = [];
+    if (order.account) {
+      tasks.push(netrunnersGet<GmxAccountResponse>(`/api/gmx/live/account?address=${encodeURIComponent(order.account)}`)
+        .then((a) => { if (alive) setAccount(a ?? null); }).catch(() => {}));
+    }
+    if (order.request_id) {
+      tasks.push(netrunnersGet<GmxStatusResp>(`/api/gmx/live/order-status/${encodeURIComponent(order.request_id)}`)
+        .then((s) => { if (alive) setStatusResp(s ?? null); }).catch(() => {}));
+    }
+    tasks.push(netrunnersGet<{ candles?: Array<Record<string, unknown>> }>(`/api/gmx/live/ohlcv?symbol=${encodeURIComponent(base)}&timeframe=1h&limit=200`)
+      .then((r) => {
+        const mapped: CandleBar[] = (r?.candles ?? []).map((c) => {
+          const tsMs = Number(c.timestamp ?? 0);
+          return {
+            ts: Math.floor((tsMs > 1e12 ? tsMs : tsMs * 1000) / 1000), // GMX SDK candles are in ms; chart wants seconds
+            open: String(c.open ?? 0), high: String(c.high ?? 0), low: String(c.low ?? 0), close: String(c.close ?? 0), volume: "0",
+          };
+        });
+        if (alive) { setBars(mapped); if (!mapped.length) setChartErr("No candles available"); }
+      })
+      .catch((e) => { if (alive) setChartErr(String(e)); }));
+    void Promise.all(tasks).then(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [order.account, order.request_id, base]);
+
+  const positions = (account?.positions ?? []) as Array<Record<string, unknown>>;
+  const pos = positions.find((p) => String(p.indexName ?? "").toUpperCase().startsWith(base.toUpperCase())) ?? positions[0];
+  const tradesRaw = account?.trades;
+  const allTrades = (Array.isArray(tradesRaw) ? tradesRaw : (tradesRaw as { trades?: unknown[] })?.trades ?? []) as Array<Record<string, unknown>>;
+  const myTrades = pos
+    ? allTrades.filter((t) => String(t.marketAddress ?? "").toLowerCase() === String(pos.marketAddress ?? "").toLowerCase())
+    : allTrades;
+
+  const sizeUsd = pos ? gmxNum(pos.sizeInUsd, 30) : (order.size_usd ?? 0);
+  const collUsd = pos ? gmxNum(pos.collateralUsd, 30) : (order.collateral_usd ?? 0);
+  const pnl = pos ? gmxNum(pos.pnl, 30) : 0;
+  const pnlPct = collUsd > 0 ? (pnl / collUsd) * 100 : 0;
+  const lev = collUsd > 0 ? sizeUsd / collUsd : (order.leverage ?? 0);
+  const entry = pos ? gmxNum(pos.entryPrice, 30) : 0;
+  const mark = pos ? gmxNum(pos.markPrice, 30) : 0;
+  const liq = pos ? gmxNum(pos.liquidationPrice, 30) : 0;
+  const isLong = pos ? Boolean(pos.isLong) : String(order.direction ?? "long").toLowerCase() !== "short";
+  const up = pnl >= 0;
+
+  const st = statusResp?.status ?? {};
+  const txHash = String(st.executionTxnHash ?? st.createdTxnHash ?? st.txHash ?? "");
+  const orderState = String(st.status ?? order.status ?? "submitted");
+
+  return createPortal(
+    <div className="nexa" style={{ display: "contents" }}>
+      <div className="nx-inspect-overlay" onClick={onClose}>
+        <div className="nx-inspect" onClick={(e) => e.stopPropagation()}>
+          <header className="nx-inspect-head">
+            <div>
+              <div className="nx-inspect-sym"><b>{order.symbol ?? base}</b><span className={`nx-lt-side ${isLong ? "long" : "short"}`}>{isLong ? "long" : "short"}</span></div>
+              <span className="nx-inspect-logic">{order.strategy_id ?? order.bot_type ?? "manual"} · <span className={`nx-lt-pill ${livePillTone(orderState)}`}>{orderState}</span></span>
+            </div>
+            <button className="nx-inspect-x" onClick={onClose} aria-label="Close">✕</button>
+          </header>
+
+          <div className="nx-inspect-pnl">
+            <div className={`nx-inspect-pnl-main ${up ? "up" : "down"}`}>
+              <span>Unrealized PnL</span>
+              <b>{loading && !pos ? "…" : fmtSignedUsd(pnl)}</b>
+              <em>{pos ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(3)}%` : (loading ? "loading…" : "no open position")}</em>
+            </div>
+            <div className="nx-inspect-pnl-grid">
+              <div><span>Size</span><b>{fmtUsdSmall(sizeUsd)}</b></div>
+              <div><span>Collateral</span><b>{fmtUsdSmall(collUsd)}</b></div>
+              <div><span>Leverage</span><b>{lev ? `${lev.toFixed(2)}×` : "—"}</b></div>
+              <div><span>Entry</span><b>{fmtPriceUsd(entry)}</b></div>
+              <div><span>Mark</span><b>{fmtPriceUsd(mark)}</b></div>
+              <div><span>Liquidation</span><b className="warn">{fmtPriceUsd(liq)}</b></div>
+            </div>
+          </div>
+
+          <div className="nx-inspect-chart">
+            <div className="nx-inspect-card-head"><span>{base} · 1h</span><span className="muted">GMX v2 oracle candles</span></div>
+            {bars.length ? <CandleChart bars={bars} height={240} /> : <div className="nx-inspect-empty">{chartErr || (loading ? "Loading candles…" : "No candles")}</div>}
+          </div>
+
+          <div className="nx-inspect-fills">
+            <div className="nx-inspect-card-head"><span>Fills &amp; executions</span><span className="muted">{myTrades.length} event{myTrades.length === 1 ? "" : "s"}</span></div>
+            {myTrades.length ? (
+              <div className="nx-inspect-fill-list">
+                {myTrades.slice(0, 12).map((t, i) => {
+                  const ts = Number(t.timestamp ?? 0);
+                  const ms = ts > 1e12 ? ts : ts * 1000;
+                  const sz = gmxNum(t.sizeDeltaUsd, 30);
+                  const coll = gmxNum(t.initialCollateralDeltaAmount, 6);
+                  const hash = String(t.transactionHash ?? "");
+                  return (
+                    <div key={String(t.id ?? i)} className="nx-inspect-fill">
+                      <span className="nx-inspect-fill-ev">{String(t.eventName ?? "trade")}</span>
+                      <span>{sz ? fmtUsdSmall(sz) : "—"}</span>
+                      <span className="muted">{coll ? `${coll.toFixed(2)} USDC` : ""}</span>
+                      <span className="muted">{ms ? new Date(ms).toLocaleString() : ""}</span>
+                      {hash ? <a href={explorerTxUrl(chainId, hash)} target="_blank" rel="noreferrer" className="nx-inspect-link">tx ↗</a> : <span />}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <div className="nx-inspect-empty">{loading ? "Loading fills…" : "No fills recorded for this market yet."}</div>}
+          </div>
+
+          <footer className="nx-inspect-foot">
+            <div className="nx-inspect-links">
+              {txHash
+                ? <a href={explorerTxUrl(chainId, txHash)} target="_blank" rel="noreferrer" className="nx-inspect-cta">Open request on Arbiscan ↗</a>
+                : <span className="muted">Request {order.request_id ? shortAddr(order.request_id) : "—"} · awaiting on-chain tx</span>}
+              {order.account ? <a href={explorerUrl(chainId, order.account)} target="_blank" rel="noreferrer" className="nx-inspect-link">Account ↗</a> : null}
+            </div>
+            <button className="nx-lt-ghost" onClick={() => onRun(`Analyze my live GMX ${order.symbol ?? base} ${isLong ? "long" : "short"}: PnL ${fmtSignedUsd(pnl)} (${pnlPct.toFixed(2)}%), size ${fmtUsdSmall(sizeUsd)}, collateral ${fmtUsdSmall(collUsd)}, entry ${fmtPriceUsd(entry)}, mark ${fmtPriceUsd(mark)}, liq ${fmtPriceUsd(liq)}. Should I hold, add, or close?`)}>Ask Arivion</button>
+          </footer>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: LiveDraft | null; onRun: (prompt: string) => void; userWallet?: string; agentWallet?: string }) {
   const [tab, setTab] = useState<LiveTab>("running");
   const [policy, setPolicy] = useState<GmxPolicy | undefined>();
@@ -1370,9 +1575,10 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
   const [account, setAccount] = useState<GmxAccountResponse | null>(null);
   const [stopResult, setStopResult] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inspectOrder, setInspectOrder] = useState<GmxLiveOrder | null>(null);
 
   // The two inspectable accounts. The GMX agent wallet (where positions/collateral live) is taken
-  // from a recorded launch when present, else the known agent wallet address; the user's Privy
+  // from a recorded launch when present, else the known agent wallet address; the user's connected
   // wallet is the second account.
   const agentAddr = useMemo(() => orders.find((o) => o.account)?.account ?? agentWallet ?? "", [orders, agentWallet]);
 
@@ -1406,7 +1612,7 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
   useEffect(() => { void refreshOrders(); }, [refreshOrders]);
 
   // Pre-fill the Account tab with the agent wallet (positions live there); fall back to the user's
-  // Privy wallet, so both accounts are ready without manual entry.
+  // connected wallet, so both accounts are ready without manual entry.
   useEffect(() => {
     if (accountAddress) return;
     const def = agentAddr || userWallet;
@@ -1521,7 +1727,7 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
                       <footer>
                         <span>{o.account ? shortAddr(o.account) : "no account"} · {o.created_at ? new Date(o.created_at).toLocaleString() : "no timestamp"}</span>
                         <div className="nx-lt-order-actions">
-                          <button className="nx-lt-ghost" disabled={!o.account || busy} onClick={() => { if (o.account) { setAccountAddress(o.account); setTab("account"); void refreshAccount(o.account); } }}>Inspect</button>
+                          <button className="nx-lt-ghost" disabled={busy} onClick={() => setInspectOrder(o)}>Inspect</button>
                           <button className="nx-lt-danger" disabled={busy} onClick={() => void stopLiveOrder(o)}>Close</button>
                         </div>
                       </footer>
@@ -1539,7 +1745,7 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
           </div>
           <aside className="nx-lt-side-col">
             <div className="nx-lt-card">
-              <div className="nx-lt-card-head"><span>Monitor</span><button className="nx-lt-ghost" onClick={() => onRun("Review my current GMX live trading ledger, account risk, stop semantics and missing execution gates.")}>Ask Nexa</button></div>
+              <div className="nx-lt-card-head"><span>Monitor</span><button className="nx-lt-ghost" onClick={() => onRun("Review my current GMX live trading ledger, account risk, stop semantics and missing execution gates.")}>Ask Arivion</button></div>
               <p className="nx-lt-status"><i className={busy ? "spin" : ""} />{status}</p>
               <div className="nx-lt-mini-stats">
                 <span>positions <b>{positionsN}</b></span>
@@ -1566,7 +1772,7 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
                 <button className={`nx-lt-wallet ${accountAddress === userWallet && userWallet ? "on" : ""}`} disabled={!userWallet} onClick={() => selectWallet(userWallet)}>
                   <span>My wallet</span>
                   <b>{userWallet ? shortAddr(userWallet) : "not linked"}</b>
-                  <em>Privy-linked user wallet</em>
+                  <em>Connected user wallet</em>
                 </button>
               </div>
               <div className="nx-lt-account-bar">
@@ -1587,7 +1793,7 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
           </div>
           <aside className="nx-lt-side-col">
             <div className="nx-lt-card">
-              <div className="nx-lt-card-head"><span>Account health</span><button className="nx-lt-ghost" onClick={() => onRun(`Analyze this GMX account state for liquidation, exposure and bot risks: ${JSON.stringify(account ?? {}).slice(0, 1600)}`)}>Ask Nexa</button></div>
+              <div className="nx-lt-card-head"><span>Account health</span><button className="nx-lt-ghost" onClick={() => onRun(`Analyze this GMX account state for liquidation, exposure and bot risks: ${JSON.stringify(account ?? {}).slice(0, 1600)}`)}>Ask Arivion</button></div>
               <p className="nx-lt-status"><i className={busy ? "spin" : ""} />{account?.error ? `Account error: ${account.error}` : status}</p>
               <pre className="nx-live-code small">{shortJson(account, "Refresh an address to inspect the full account payload.")}</pre>
             </div>
@@ -1599,7 +1805,7 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
         <div className="nx-lt-body">
           <div className="nx-lt-main">
             <div className="nx-lt-card">
-              <div className="nx-lt-card-head"><span>Risk gates</span><button className="nx-lt-ghost" onClick={() => onRun("Explain the GMX live trading risk gates, required env vars, stop semantics and which bot types are allowed.")}>Ask Nexa</button></div>
+              <div className="nx-lt-card-head"><span>Risk gates</span><button className="nx-lt-ghost" onClick={() => onRun("Explain the GMX live trading risk gates, required env vars, stop semantics and which bot types are allowed.")}>Ask Arivion</button></div>
               <div className="nx-lt-gaterow">
                 <div className={`nx-lt-gatecell ${policy?.canPrepare === false ? "bad" : "ok"}`}><span>Prepare</span><b>{policy?.canPrepare === false ? "Blocked" : "Allowed"}</b></div>
                 <div className={`nx-lt-gatecell ${policy?.canSubmit ? "ok" : "bad"}`}><span>Submit</span><b>{policy?.canSubmit ? "Enabled" : "Gated"}</b></div>
@@ -1630,6 +1836,10 @@ function LiveTradingPanel({ draft, onRun, userWallet, agentWallet }: { draft: Li
             </div>
           </aside>
         </div>
+      ) : null}
+
+      {inspectOrder ? (
+        <GmxInspectModal order={inspectOrder} chainId={ARB_ONE_CHAIN_ID} onClose={() => setInspectOrder(null)} onRun={onRun} />
       ) : null}
     </div>
   );
@@ -1680,10 +1890,14 @@ function TestnetLaunchModal({
   request,
   onClose,
   onPlanReady,
+  authLockedReason,
+  onAuthRequired,
 }: {
   request: LaunchRequest | null;
   onClose: () => void;
   onPlanReady: (plan: LaunchPlan) => void;
+  authLockedReason?: string | null;
+  onAuthRequired?: () => void;
 }) {
   const [plan, setPlan] = useState<LaunchPlan | null>(null);
   const [busy, setBusy] = useState(false);
@@ -1719,6 +1933,11 @@ function TestnetLaunchModal({
 
   async function executePlan() {
     if (!actions.length) return;
+    if (authLockedReason) {
+      setStatus(authLockedReason);
+      onAuthRequired?.();
+      return;
+    }
     setBusy(true); setRunning(true);
     setStepStates(Object.fromEntries(actions.map((a) => [a.id ?? "", { status: "running" as StepStatus }])));
     setStatus("Executing on testnet…");
@@ -1798,11 +2017,12 @@ function TestnetLaunchModal({
         ) : null}
 
         {plan?.warnings?.length ? <div className="nx-launch-warn">{plan.warnings.map((w) => <span key={w}>{w}</span>)}</div> : null}
+        {authLockedReason ? <div className="nx-launch-warn"><span>{authLockedReason}</span></div> : null}
         <p className="nx-xstatus">{status}</p>
 
         <footer className="nx-launch-actions">
           <button onClick={onClose}>{done ? "Done" : "Cancel"}</button>
-          <button className="nx-lab-primary" disabled={busy || !enabled || !actions.length || done} onClick={() => void executePlan()}>
+          <button className="nx-lab-primary" disabled={busy || !enabled || !actions.length || done || Boolean(authLockedReason)} onClick={() => void executePlan()}>
             {running ? "Executing…" : done ? "Executed" : `Execute ${actions.length || ""} step${actions.length === 1 ? "" : "s"}`.trim()}
           </button>
         </footer>
@@ -1874,37 +2094,75 @@ function SavedSetups({
   );
 }
 
+// Agent authority — READ-ONLY status surface. Authorization itself lives in the Execute flow (the
+// MetaMask Smart Accounts Kit grant happens there, in context, right before deploying capital), so the
+// wallet never makes the user hunt for a "sign delegation" button. This panel only reflects the
+// resulting authority and deep-links into Execute to set it up.
+function AgentAuthorityStatus({ onOpenExecute }: { onOpenExecute?: () => void }) {
+  const [delegations, setDelegations] = useState<DelegationRow[]>([]);
+  useEffect(() => { listDelegations().then(setDelegations).catch(() => {}); }, []);
+  const active = delegations.find((d) => d.status === "active");
+  return (
+    <section className="nx-wc-agent">
+      <span className="nx-wc-section-h">Agent authority · MetaMask Smart Account</span>
+      <div className={`nx-wc-auth ${active ? "on" : ""}`}>
+        <span className="nx-wc-auth-dot" />
+        <div className="nx-wc-auth-main">
+          {active ? (
+            <><b>Authorized</b><em>Delegated → {shortAddr(active.delegate_address)} · agent can trade within scope</em></>
+          ) : (
+            <><b>Not authorized</b><em>The agent cannot trade until you authorize it in Execute.</em></>
+          )}
+        </div>
+        {onOpenExecute ? (
+          <button className="nx-wc-auth-cta" onClick={onOpenExecute}>{active ? "Manage in Execute →" : "Set up in Execute →"}</button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function WalletAuthCompact({ onStatus }: { onStatus: (s: WalletSession) => void }) {
-  const { ready, authenticated, user, login, logout, getAccessToken } = usePrivy();
-  const label = user?.email?.address ?? user?.wallet?.address ?? null;
+  if (typeof window !== "undefined" && !isWalletRuntimeAvailable()) {
+    return <WalletAuthHttpFallback onStatus={onStatus} />;
+  }
+  return <WalletAuthCompactInner onStatus={onStatus} />;
+}
+
+function WalletAuthHttpFallback({ onStatus }: { onStatus: (s: WalletSession) => void }) {
+  useEffect(() => {
+    onStatus({ ready: true, authenticated: false, label: null, walletAddress: null });
+  }, [onStatus]);
+  return <span className="nx-wallet-auth-line">MetaMask + HTTPS required to connect</span>;
+}
+
+function WalletAuthCompactInner({ onStatus }: { onStatus: (s: WalletSession) => void }) {
+  const { ready, authenticated, address, signIn, signOut } = useNetrunnersAuth();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const label = address ?? null;
 
   useEffect(() => {
-    registerPrivyTokenFetcher(authenticated ? () => getAccessToken() : null);
-    return () => registerPrivyTokenFetcher(null);
-  }, [authenticated, getAccessToken]);
-
-  useEffect(() => {
-    onStatus({ ready, authenticated, label });
-  }, [authenticated, label, onStatus, ready]);
+    onStatus({ ready, authenticated, label, walletAddress: address });
+  }, [authenticated, label, onStatus, ready, address]);
 
   const onLogin = useCallback(async () => {
-    await login();
-    const token = await getAccessToken();
-    setPrivyToken(token ?? null);
-  }, [getAccessToken, login]);
+    setBusy(true); setErr(null);
+    try { await signIn(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }, [signIn]);
 
   const onLogout = useCallback(async () => {
-    try { await netrunnersFetch("/api/netrunners/auth/logout", { method: "POST" }); } catch { /* ignore */ }
-    setPrivyToken(null);
-    await logout();
-  }, [logout]);
+    setBusy(true);
+    try { await signOut(); } finally { setBusy(false); }
+  }, [signOut]);
 
   if (!ready) return <span className="nx-wallet-auth-line">Checking session…</span>;
-  if (!authenticated) return <button className="nx-wallet-auth-btn" onClick={onLogin}>Connect / sign in</button>;
+  if (!authenticated) return <button className="nx-wallet-auth-btn" onClick={onLogin} disabled={busy}>{busy ? "Signing in…" : "Connect MetaMask"}</button>;
   return (
     <div className="nx-wallet-auth-compact">
-      <span><b>Signed in</b><em>{label ?? "active session"}</em></span>
-      <button className="nx-wallet-auth-btn" onClick={onLogout}>Log out</button>
+      <span><b>Signed in</b><em>{label ? shortAddr(label) : "active session"}</em></span>
+      <button className="nx-wallet-auth-btn" onClick={onLogout} disabled={busy}>Log out</button>
+      {err ? <span className="nx-wc-muted">{err}</span> : null}
     </div>
   );
 }
@@ -1932,6 +2190,7 @@ function WalletDock({
   onClose,
   onRefresh,
   onSession,
+  onOpenExecute,
 }: {
   wallets: LinkedWallet[];
   agentWallet: AgentWalletInfo | null;
@@ -1943,33 +2202,38 @@ function WalletDock({
   onClose: () => void;
   onRefresh: () => void;
   onSession: (s: WalletSession) => void;
+  onOpenExecute?: () => void;
 }) {
-  const [net, setNet] = useState<number>(ARB_SEPOLIA_CHAIN_ID);
+  const [net, setNet] = useState<number>(ARB_ONE_CHAIN_ID);
   const [copied, setCopied] = useState(false);
   const connected = wallets.length > 0;
+  const sessionWallet = session.walletAddress ?? null;
+  const walletReady = connected || Boolean(sessionWallet);
   const signedIn = session.authenticated;
   const primary = wallets[0];
-  const idAddr = primary?.wallet_address ?? agentWallet?.address ?? "";
+  const idAddr = primary?.wallet_address ?? sessionWallet ?? agentWallet?.address ?? "";
   const credit = credits?.managedBalanceUsd ?? 0;
   const creditPct = Math.max(4, Math.min(100, (credit / 25) * 100));
-  const cardTitle = connected ? "Wallet linked" : signedIn ? "Signed in · link pending" : "Connect wallet";
+  const cardTitle = walletReady ? "Wallet linked" : signedIn ? "Signed in" : "Connect wallet";
   const cardSub = connected
     ? `${shortAddr(primary.wallet_address)} · agent ${agentWallet ? shortAddr(agentWallet.address) : "pending"}`
-    : signedIn ? `${session.label ?? "email session"}` : "User wallet + agent wallet";
-  const isArb = net === ARB_SEPOLIA_CHAIN_ID;
-  const t = agentWallet?.tokens;
-  const tokenRows = isArb
-    ? [{ sym: "ETH", amt: agentWallet?.ethBalanceArb }, { sym: "dUSDC", amt: t?.arbitrumSepolia?.dUSDC }, { sym: "dWETH", amt: t?.arbitrumSepolia?.dWETH }]
-    : [{ sym: "ETH", amt: agentWallet?.ethBalanceRh }, { sym: "MockUSDG", amt: t?.robinhood?.mockUsdG }];
-  const totalUsd = isArb ? Number(t?.arbitrumSepolia?.dUSDC ?? 0) : Number(t?.robinhood?.mockUsdG ?? 0);
-  const showAccount = signedIn || connected;
+    : sessionWallet ? `${shortAddr(sessionWallet)} · wallet`
+      : signedIn ? `${session.label ?? "email session"}` : "User wallet + agent wallet";
+  // Live USDC + ETH for the connected account on the selected exec chain (Arbitrum One / Base).
+  const { bal: liveBal, loading: balLoading } = useChainBalance(idAddr || null, net, open || prompt);
+  const tokenRows = [
+    { sym: "USDC", amt: liveBal ? liveBal.usdc.toFixed(2) : undefined },
+    { sym: "ETH", amt: liveBal ? liveBal.eth.toFixed(4) : undefined },
+  ];
+  const totalUsd = liveBal?.usdc ?? 0;
+  const showAccount = signedIn || walletReady;
   const copyAddr = async () => {
     try { await navigator.clipboard.writeText(idAddr); setCopied(true); setTimeout(() => setCopied(false), 1400); } catch { /* ignore */ }
   };
   return (
     <>
-      {PRIVY_ENABLED ? <span className="nx-wallet-session-bridge"><WalletAuthCompact onStatus={onSession} /></span> : null}
-      <button className={`nx-wallet-card ${connected ? "on" : ""}`} onClick={onOpen}>
+      {WALLET_CONFIGURED ? <span className="nx-wallet-session-bridge"><WalletAuthCompact onStatus={onSession} /></span> : null}
+      <button className={`nx-wallet-card ${walletReady ? "on" : ""}`} onClick={onOpen}>
         <span className="nx-wallet-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16v12H4z" /><path d="M16 11h4v4h-4z" /><path d="M6 7V5h11v2" /></svg>
         </span>
@@ -1979,70 +2243,77 @@ function WalletDock({
         </span>
       </button>
       {(open || prompt) ? (
-        <div className="nx-wallet-back" onClick={onClose}>
-          <div className="nx-wc-modal" onClick={(e) => e.stopPropagation()}>
-            {showAccount ? (
-              <>
-                <header className="nx-wc-head">
-                  <span className="nx-wc-ident" style={identiconStyle(idAddr)} />
-                  <div className="nx-wc-id">
-                    <b>{idAddr ? shortAddr(idAddr) : (session.label ?? "account")}</b>
-                    <em>{connected ? "Execution wallet" : (session.label ?? "email session")}</em>
+        // Same widget chrome as the NexaBoard / Execute detail modals: nexa → nx-modal-back → nx-modal
+        // → nx-modal-head + nx-modal-body. Wallet reads as a first-class widget, not a bespoke card.
+        <div className="nexa" style={{ display: "contents" }}>
+          <div className="nx-modal-back" onClick={onClose}>
+            <div className="nx-modal nx-wc-modal" onClick={(e) => e.stopPropagation()}>
+              {showAccount ? (
+                <>
+                  <div className="nx-modal-head">
+                    <span className="nx-w-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16v12H4z" /><path d="M16 11h4v4h-4z" /><path d="M6 7V5h11v2" /></svg></span>
+                    <div>
+                      <div className="nx-modal-title">{idAddr ? shortAddr(idAddr) : (session.label ?? "Account")}</div>
+                      <div className="nx-w-kind">Wallet · {connected ? "execution account" : (session.label ?? "session")}</div>
+                    </div>
+                    <div className="nx-wc-head-actions">
+                      <button className="nx-wc-iconbtn" onClick={() => void copyAddr()} title="Copy address" disabled={!idAddr}>{copied ? "✓" : "⧉"}</button>
+                      {idAddr ? <a className="nx-wc-iconbtn" href={explorerUrl(net, idAddr)} target="_blank" rel="noreferrer" title="View on explorer">↗</a> : null}
+                      <button className="nx-modal-x" onClick={onClose} aria-label="Close">✕</button>
+                    </div>
                   </div>
-                  <div className="nx-wc-head-actions">
-                    <button className="nx-wc-iconbtn" onClick={() => void copyAddr()} title="Copy address" disabled={!idAddr}>{copied ? "✓" : "⧉"}</button>
-                    {idAddr ? <a className="nx-wc-iconbtn" href={explorerUrl(net, idAddr)} target="_blank" rel="noreferrer" title="View on explorer">↗</a> : null}
-                    <button className="nx-wc-iconbtn nx-wc-close" onClick={onClose} aria-label="Close">✕</button>
-                  </div>
-                </header>
 
-                <div className="nx-wc-nets">
-                  {[{ id: ARB_SEPOLIA_CHAIN_ID, label: "Arbitrum Sepolia" }, { id: RH_CHAIN_ID, label: "Robinhood Chain" }].map((n) => (
-                    <button key={n.id} className={net === n.id ? "on" : ""} onClick={() => setNet(n.id)}><span className="nx-wc-netdot" />{n.label}</button>
-                  ))}
+                  <div className="nx-modal-body">
+                    <div className="nx-wc-nets">
+                      {EXEC_CHAINS.map((n) => (
+                        <button key={n.id} className={net === n.id ? "on" : ""} onClick={() => setNet(n.id)}><span className="nx-wc-netdot" />{n.label}</button>
+                      ))}
+                    </div>
+
+                    <section className="nx-wc-balance">
+                      <span className="nx-wc-balance-l">USDC balance · {EXEC_CHAINS.find((c) => c.id === net)?.label}</span>
+                      <span className="nx-wc-balance-v">{balLoading ? "…" : fmtUsdSmall(totalUsd)}</span>
+                      <div className="nx-wc-tokens">
+                        {tokenRows.map((tk) => (
+                          <div className="nx-wc-token" key={tk.sym}><span>◇ {tk.sym}</span><b>{balLoading ? "…" : fmtToken(tk.amt)}</b></div>
+                        ))}
+                      </div>
+                      {!idAddr ? <p className="nx-wc-muted">Connect MetaMask to read live balances.</p> : null}
+                    </section>
+
+                    {agentWallet ? (
+                      <section className="nx-wc-agent">
+                        <span className="nx-wc-section-h">Agent session account</span>
+                        <a className="nx-wc-row" href={explorerUrl(net, agentWallet.address)} target="_blank" rel="noreferrer">
+                          <span>{shortAddr(agentWallet.address)}</span>
+                          <em>view ↗</em>
+                        </a>
+                      </section>
+                    ) : null}
+
+                    <AgentAuthorityStatus onOpenExecute={onOpenExecute} />
+
+                    <section className="nx-wc-credit">
+                      <div className="nx-wc-credit-head"><span>Copilot credit</span><b>${credit.toFixed(2)} · {credits?.status ?? "—"}</b></div>
+                      <div className="nx-credit-bar"><i style={{ width: `${creditPct}%` }} /></div>
+                    </section>
+
+                    <footer className="nx-wc-foot">
+                      <button className="nx-wc-refresh" onClick={onRefresh}>Refresh</button>
+                      {WALLET_CONFIGURED ? <WalletAuthCompact onStatus={onSession} /> : <span className="nx-wc-muted">Connect MetaMask to sign in.</span>}
+                    </footer>
+                  </div>
+                </>
+              ) : (
+                <div className="nx-wc-connect">
+                  <span className="nx-wc-ident lg" style={identiconStyle("0x5a1f2ea0")} />
+                  <h2>Connect your wallet</h2>
+                  <p>Sign in with MetaMask to link your execution account. The agent&apos;s session account and on-chain authority appear here.</p>
+                  {WALLET_CONFIGURED ? <WalletAuthCompact onStatus={onSession} /> : <span className="nx-wc-muted">MetaMask required to sign in.</span>}
+                  <button className="nx-wc-close-text" onClick={onClose}>Close</button>
                 </div>
-
-                <section className="nx-wc-balance">
-                  <span className="nx-wc-balance-l">Total balance</span>
-                  <span className="nx-wc-balance-v">{fmtUsdSmall(totalUsd)}</span>
-                  <div className="nx-wc-tokens">
-                    {tokenRows.map((tk) => (
-                      <div className="nx-wc-token" key={tk.sym}><span>◇ {tk.sym}</span><b>{fmtToken(tk.amt)}</b></div>
-                    ))}
-                  </div>
-                  {!agentWallet ? <p className="nx-wc-muted">Balances populate once the agent wallet is created.</p> : null}
-                </section>
-
-                <section className="nx-wc-agent">
-                  <span className="nx-wc-section-h">Agent wallet</span>
-                  {agentWallet ? (
-                    <a className="nx-wc-row" href={explorerUrl(net, agentWallet.address)} target="_blank" rel="noreferrer">
-                      <span>{shortAddr(agentWallet.address)}</span>
-                      <b>{isArb ? agentWallet.ethBalanceArb : agentWallet.ethBalanceRh} ETH</b>
-                      <em>↗</em>
-                    </a>
-                  ) : <div className="nx-wc-empty">Pending creation.</div>}
-                </section>
-
-                <section className="nx-wc-credit">
-                  <div className="nx-wc-credit-head"><span>Copilot credit</span><b>${credit.toFixed(2)} · {credits?.status ?? "—"}</b></div>
-                  <div className="nx-credit-bar"><i style={{ width: `${creditPct}%` }} /></div>
-                </section>
-
-                <footer className="nx-wc-foot">
-                  <button className="nx-wc-refresh" onClick={onRefresh}>Refresh</button>
-                  {PRIVY_ENABLED ? <WalletAuthCompact onStatus={onSession} /> : <span className="nx-wc-muted">Login disabled (no Privy app id).</span>}
-                </footer>
-              </>
-            ) : (
-              <div className="nx-wc-connect">
-                <span className="nx-wc-ident lg" style={identiconStyle("0x5a1f2ea0")} />
-                <h2>Connect your wallet</h2>
-                <p>Sign in, then link a chain wallet to approve testnet execution. Your account and an auto-funded agent wallet appear here.</p>
-                {PRIVY_ENABLED ? <WalletAuthCompact onStatus={onSession} /> : <span className="nx-wc-muted">Privy app id is not set in this build.</span>}
-                <button className="nx-wc-close-text" onClick={onClose}>Close</button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       ) : null}
@@ -2095,8 +2366,9 @@ function ChatStepGroups({
   );
 }
 
-export default function NexaWorkspace() {
+export default function ArivionWorkspace() {
   const [view, setView] = useState<string>("console");
+  const [execOpen, setExecOpen] = useState(false);
   const [started, setStarted] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [widgets, setWidgets] = useState<BoardWidget[]>([]);
@@ -2111,7 +2383,7 @@ export default function NexaWorkspace() {
   const [agentWallet, setAgentWallet] = useState<AgentWalletInfo | null>(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletPrompt, setWalletPrompt] = useState(false);
-  const [walletSession, setWalletSession] = useState<WalletSession>({ ready: !PRIVY_ENABLED, authenticated: false, label: null });
+  const [walletSession, setWalletSession] = useState<WalletSession>({ ready: !WALLET_CONFIGURED, authenticated: false, label: null, walletAddress: null });
   const [walletChecked, setWalletChecked] = useState(false);
   const [question, setQuestion] = useState<{ id: string; question: string; options: Opt[]; multi: boolean } | null>(null);
   const [picks, setPicks] = useState<string[]>([]);
@@ -2139,11 +2411,34 @@ export default function NexaWorkspace() {
     setWalletChecked(true);
   }, []);
 
+  const handleWalletSession = useCallback((session: WalletSession) => {
+    setWalletSession(session);
+    if (session.authenticated) void refreshWalletSurface();
+  }, [refreshWalletSurface]);
+
   useEffect(() => { void refreshWalletSurface(); }, [refreshWalletSurface]);
   useEffect(() => {
     if (walletChecked && wallets.length === 0) setWalletPrompt(true);
   }, [walletChecked, wallets.length]);
   useEffect(() => { convoRef.current?.scrollTo({ top: convoRef.current.scrollHeight, behavior: "smooth" }); }, [messages, status, chatSteps]);
+
+  const walletRuntimeReady = typeof window !== "undefined" && isWalletRuntimeAvailable();
+  const agentLockedReason = useMemo(() => {
+    if (!WALLET_CONFIGURED) return "Wallet auth is not configured for this build.";
+    if (!walletSession.ready) return "Checking wallet session before starting Arivion.";
+    if (!walletRuntimeReady) return "Open https://arivion.xyz to connect your wallet before starting Arivion.";
+    if (!walletSession.authenticated) return "Connect MetaMask and sign in before starting Arivion.";
+    if (!walletSession.walletAddress && wallets.length === 0) return "Finish wallet signup or link a testnet wallet before starting Arivion.";
+    return null;
+  }, [walletRuntimeReady, walletSession.authenticated, walletSession.ready, walletSession.walletAddress, wallets.length]);
+
+  const requireWalletForAgent = useCallback((action = "starting Arivion") => {
+    if (!agentLockedReason) return true;
+    setWalletPrompt(true);
+    setWalletOpen(true);
+    setStatus(agentLockedReason.replace("starting Arivion", action));
+    return false;
+  }, [agentLockedReason]);
 
   const focusWidget = useCallback((id: string) => {
     setView("console");
@@ -2273,6 +2568,27 @@ export default function NexaWorkspace() {
     setRecentThreads(r?.threads ?? []);
   }, []);
 
+  // Reset the console to a blank session — next message opens a fresh thread.
+  const newChat = useCallback(() => {
+    abortRef.current?.();
+    threadId.current = null;
+    try { localStorage.removeItem(COPILOT_THREAD_KEY); } catch { /* ignore */ }
+    wIdx.current = 0;
+    setStarted(false);
+    setMessages([]);
+    setWidgets([]);
+    setChatSteps([]);
+    setExpandedStepGroups({});
+    setQuestion(null);
+    setWizard(null);
+    setFocusWidgetId(null);
+    setInput("");
+    setBusy(false);
+    setStatus(null);
+    setView("console");
+    void loadRecentThreads();
+  }, [loadRecentThreads]);
+
   const hydrateThread = useCallback(async (id: string) => {
     setHydratingThread(true);
     const snap = await copilotGet<ThreadSnapshot>(`/threads/${id}/snapshot`);
@@ -2321,10 +2637,11 @@ export default function NexaWorkspace() {
     if (stored && !threadId.current) void hydrateThread(stored);
   }, [hydrateThread, loadRecentThreads]);
 
-  // "Nexa Analyze": re-run the whole flow with the edited basket weights (deterministic + streamed).
+  // "Arivion Analyze": re-run the whole flow with the edited basket weights (deterministic + streamed).
   const analyze = useCallback(async () => {
     const b = widgets.find((w) => w.kind === "basket" && (w.data as Record<string, unknown>)?._dirty);
     if (!b || busy) return;
+    if (!requireWalletForAgent("running analysis")) return;
     const data = b.data as Record<string, unknown>;
     const legs = (data.legs as Array<Record<string, unknown>>) ?? [];
     const weights: Record<string, number> = {}; const symbols: string[] = []; const bots: Record<string, string> = {};
@@ -2341,7 +2658,7 @@ export default function NexaWorkspace() {
     });
     if (!r?.runId) { setBusy(false); setStatus("re-run failed — is the agent up?"); return; }
     abortRef.current?.(); abortRef.current = streamRun(r.runId, handleEvent).abort;
-  }, [widgets, busy, handleEvent]);
+  }, [widgets, busy, handleEvent, requireWalletForAgent]);
 
   const hasBasket = widgets.some((w) => w.kind === "basket");
   const inQuantsLab = view === "quants";
@@ -2375,11 +2692,12 @@ export default function NexaWorkspace() {
     const spec = s.spec as Record<string, unknown>;
     abortRef.current?.(); threadId.current = null; wIdx.current = 0;
     setView("console"); setStarted(true); setBusy(false); setStatus(null); setQuestion(null); setWizard(null);
-    setMessages([{ role: "assistant", content: `Loaded "${s.name}". Edit allocations and hit Nexa Analyze to re-run the flow, or launch it from Saved.` }]);
+    setMessages([{ role: "assistant", content: `Loaded "${s.name}". Edit allocations and hit Arivion Analyze to re-run the flow, or launch it from Saved.` }]);
     setWidgets([{ id: "ma-basket", kind: "basket", title: "Saved strategy basket", state: "done", x: 40, y: 36, data: { ...spec, _dirty: false } }]);
   }, []);
 
   const launchSetup = useCallback((setup: Setup) => {
+    if (!requireWalletForAgent("launching a saved setup")) return;
     const spec = setup.spec as Record<string, unknown>;
     const legs = (Array.isArray(spec.legs) ? spec.legs as Array<Record<string, unknown>> : []).map((l) => ({
       symbol: String(l.symbol ?? ""),
@@ -2394,11 +2712,12 @@ export default function NexaWorkspace() {
     const requestedUsd = Number(spec.budget_usd ?? 20);
     setLaunchRequest({ requestedUsd, depositUsd: requestedUsd, text: `Launch saved setup ${setup.name}`, legs });
     setView("console");
-  }, []);
+  }, [requireWalletForAgent]);
 
   // Send a message to the agent and stream the run (drives the board + rail). `silent` skips the user
   // bubble (used after the wizard, where the convo already shows the chosen answers).
   const runAgent = useCallback(async (content: string, opts: { silent?: boolean } = {}) => {
+    if (!requireWalletForAgent("starting Arivion")) return;
     setStarted(true); setBusy(true); setStatus("thinking…"); setQuestion(null); setPicks([]);
     setChatSteps([]); setExpandedStepGroups({}); setFocusWidgetId(null);
     if (!opts.silent) setMessages((m) => [...m, { role: "user", content }]);
@@ -2413,7 +2732,7 @@ export default function NexaWorkspace() {
     if (!r?.runId) { setBusy(false); setStatus("the agent didn't accept the message"); return; }
     abortRef.current?.();
     abortRef.current = streamRun(r.runId, handleEvent).abort;
-  }, [handleEvent, loadRecentThreads]);
+  }, [handleEvent, loadRecentThreads, requireWalletForAgent]);
 
   // Advance the deterministic multiasset wizard; on the last step compose one request to the agent.
   const answerWizard = useCallback((choice: string) => {
@@ -2447,23 +2766,28 @@ export default function NexaWorkspace() {
     if (!t || busy || wizard) return;
     setInput("");
     if (LAUNCH_INTENT_RE.test(t)) {
+      if (!requireWalletForAgent("opening testnet execution")) return;
       setLaunchRequest(buildLaunchRequest(t));
       return;
     }
     void runAgent(t);
-  }, [buildLaunchRequest, busy, wizard, runAgent]);
+  }, [buildLaunchRequest, busy, requireWalletForAgent, wizard, runAgent]);
 
   return (
     <div className={`nexa ${chakraPetch.variable} ${orbitron.variable} ${shareTechMono.variable} ${archivo.variable} ${boardActive ? "board-active" : ""} ${inQuantsLab || inLiveTrading ? "lab-view" : ""} ${railOff ? "rail-off" : ""}`}>
       {/* ---- Sidebar (collapses once the agent starts placing widgets) ---- */}
       <aside className="nx-side">
-        <div className="nx-brand"><Burst /><div><div className="nx-brand-name">Nexa</div><div className="nx-brand-sub">Agentic Quant</div></div></div>
+        <div className="nx-brand"><Burst /><div><div className="nx-brand-name">Arivion</div><div className="nx-brand-sub">Agentic Quant</div></div></div>
         <nav className="nx-nav">
           {NAV.map((n) => (
             <button key={n.id} className={`nx-nav-item ${view === n.id ? "on" : ""}`} onClick={() => setView(n.id)}>
               <Icon d={n.icon} /><span>{n.label}</span>
             </button>
           ))}
+          <button className="nx-nav-item nx-nav-exec" onClick={() => setExecOpen(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" /></svg>
+            <span>Execute <em>test</em></span>
+          </button>
         </nav>
         <div className="nx-side-foot">
           <WalletDock
@@ -2476,7 +2800,8 @@ export default function NexaWorkspace() {
             onOpen={() => setWalletOpen(true)}
             onClose={() => { setWalletOpen(false); setWalletPrompt(false); }}
             onRefresh={() => void refreshWalletSurface()}
-            onSession={setWalletSession}
+            onSession={handleWalletSession}
+            onOpenExecute={() => { setWalletOpen(false); setWalletPrompt(false); setExecOpen(true); }}
           />
         </div>
       </aside>
@@ -2496,8 +2821,10 @@ export default function NexaWorkspace() {
             onSelect={setLabTab}
             onRun={(prompt) => void runAgent(prompt)}
             onOpenLiveDraft={(draft) => {
+              // Keep the user inside the Quants Lab on the GMX Live Ticket sub-tab
+              // (armLiveTicket switches to "paper"); do NOT navigate to the monitor-only
+              // Live Trading view, which has no order form.
               setLiveDraft(draft);
-              setView("live");
             }}
           />
         ) : inMarkets ? (
@@ -2505,7 +2832,6 @@ export default function NexaWorkspace() {
             variant="embedded"
             onCopilot={(prompt) => {
               setView("console");
-              setStarted(true);
               void runAgent(prompt);
             }}
           />
@@ -2518,7 +2844,7 @@ export default function NexaWorkspace() {
             {started && hasBasket ? <button className="nx-save" disabled={busy} onClick={() => void saveSetup()}>Save setup</button> : null}
             {started ? (
               <button className={`nx-fab ${dirtyBasket ? "on" : ""}`} disabled={!dirtyBasket || busy} onClick={() => void analyze()}>
-                <span className="nx-fab-dot" /> Nexa Analyze
+                <span className="nx-fab-dot" /> Arivion Analyze
               </button>
             ) : null}
           </>
@@ -2532,18 +2858,25 @@ export default function NexaWorkspace() {
             <span className="nx-pill"><b />Data Intelligence</span>
             <div className="nx-hero">
               <h1>Trade.<br />In Motion.</h1>
-              <p>Watch complexity organize itself into clarity. Nexa reasons like a quant desk — analyzing, backtesting and optimizing in front of you.</p>
+              <p>Watch complexity organize itself into clarity. Arivion reasons like a quant desk — analyzing, backtesting and optimizing in front of you.</p>
             </div>
             <div className="nx-hero-stats">
               <div className="nx-hs"><div className="v">693</div><div className="l">Live symbols screened</div></div>
-              <div className="nx-hs"><div className="v">Paper</div><div className="l">No real-money risk</div></div>
+              <div className="nx-hs"><div className="v">Live</div><div className="l">On Arbitrum One</div></div>
             </div>
           </>
         ) : (
+          <>
+          <div className="nx-rail-top">
+            <button className="nx-newchat" onClick={newChat} disabled={busy} title="Start a fresh chat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+              New chat
+            </button>
+          </div>
           <div className="nx-convo" ref={convoRef}>
             {messages.map((m, i) => (
               <div key={i} className={`nx-msg ${m.role}`}>
-                <span className="nx-msg-role">{m.role === "user" ? "You" : "Nexa"}</span>
+                <span className="nx-msg-role">{m.role === "user" ? "You" : "Arivion"}</span>
                 <div className="nx-msg-body">{m.role === "assistant" ? rich(m.content) : m.content}</div>
               </div>
             ))}
@@ -2551,6 +2884,7 @@ export default function NexaWorkspace() {
             {hydratingThread ? <div className="nx-status"><span className="spin" />reopening saved chat…</div> : null}
             {status ? <div className="nx-status"><span className="spin" />{status}</div> : null}
           </div>
+          </>
         )}
 
         <div className="nx-composer">
@@ -2580,6 +2914,7 @@ export default function NexaWorkspace() {
               </div>
             </div>
           ) : null}
+          {agentLockedReason ? <div className="nx-agent-lock">{agentLockedReason}</div> : null}
           {executableBasket ? (
             <div className="nx-execute-bar">
               <div className="nx-execute-bar-copy">
@@ -2588,8 +2923,11 @@ export default function NexaWorkspace() {
               </div>
               <button
                 className="nx-execute"
-                disabled={busy}
-                onClick={() => setLaunchRequest(buildLaunchRequest("Execute the composed 3-sleeve plan on testnet"))}
+                disabled={busy || Boolean(agentLockedReason)}
+                onClick={() => {
+                  if (!requireWalletForAgent("opening testnet execution")) return;
+                  setLaunchRequest(buildLaunchRequest("Execute the composed 3-sleeve plan on testnet"));
+                }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l14 8-14 8V4z" /></svg>
                 Execute
@@ -2598,7 +2936,7 @@ export default function NexaWorkspace() {
           ) : null}
           <div className="nx-composer-row">
             <textarea
-              rows={1} value={input} placeholder="Ask Nexa to analyze, scan, backtest…"
+              rows={1} value={input} placeholder={agentLockedReason ? "Connect your wallet to start Arivion…" : "Ask Arivion to analyze, scan, backtest…"}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(input); } }}
             />
@@ -2614,6 +2952,11 @@ export default function NexaWorkspace() {
       <TestnetLaunchModal
         request={launchRequest}
         onClose={() => setLaunchRequest(null)}
+        authLockedReason={agentLockedReason}
+        onAuthRequired={() => {
+          setWalletPrompt(true);
+          setWalletOpen(true);
+        }}
         onPlanReady={(plan) => {
           setStarted(true);
           setMessages((m) => [...m, {
@@ -2622,6 +2965,7 @@ export default function NexaWorkspace() {
           }]);
         }}
       />
+      <StrategyExecute open={execOpen} onClose={() => setExecOpen(false)} userWallet={walletSession.walletAddress ?? wallets[0]?.wallet_address ?? undefined} />
     </div>
   );
 }

@@ -116,6 +116,17 @@
 
 /* composer */
 .nx-composer { margin-top: auto; }
+.nx-agent-lock {
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 206, 58, 0.42);
+  border-radius: 5px;
+  background: rgba(255, 206, 58, 0.08);
+  color: var(--gold);
+  padding: 9px 10px;
+  font: 700 11px/1.35 var(--font-display, "Chakra Petch", system-ui, sans-serif);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 .nx-composer-row { display: flex; gap: 10px; align-items: flex-end; background: var(--panel); border: 1px solid var(--line);
   border-radius: 18px; padding: 8px 8px 8px 16px; box-shadow: 0 10px 26px rgb(15 15 20 / 6%); }
 .nx-composer textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent; font: inherit; font-size: 14px;
@@ -193,7 +204,7 @@
 .nx-saved-empty { color: var(--ink-3); font-size: 14px; padding: 40px 0; }
 
 /* save button (sits left of the FAB) */
-.nx-save { position: absolute; right: 178px; bottom: 22px; z-index: 30; display: inline-flex; align-items: center; gap: 8px;
+.nx-save { position: absolute; right: 210px; bottom: 22px; z-index: 30; display: inline-flex; align-items: center; gap: 8px;
   padding: 13px 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 13.5px; font-weight: 600;
   cursor: pointer; box-shadow: 0 10px 26px rgb(15 15 20 / 8%); transition: border-color .15s, transform .15s; }
 .nx-save:hover:not(:disabled) { border-color: var(--ink); transform: translateY(-2px); }
@@ -342,6 +353,16 @@
 .nx-wc-row span { font-family: var(--mono); color: var(--ink-2); font-size: 12.5px; }
 .nx-wc-row b { margin-left: auto; font-family: var(--mono); color: var(--ink); font-size: 12.5px; }
 .nx-wc-row em { font-style: normal; color: var(--cyan); }
+/* Agent authority — read-only status; the actual authorize action lives in the Execute flow. */
+.nx-wc-auth { display: flex; align-items: center; gap: 11px; }
+.nx-wc-auth-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ink-3); box-shadow: 0 0 0 3px rgba(255,255,255,.04); }
+.nx-wc-auth.on .nx-wc-auth-dot { background: var(--cyan, #46e0ff); box-shadow: 0 0 0 3px rgba(70,224,255,.14); }
+.nx-wc-auth-main { min-width: 0; display: grid; gap: 2px; }
+.nx-wc-auth-main b { font-size: 13px; color: var(--ink); }
+.nx-wc-auth-main em { font-style: normal; font-size: 11px; color: var(--ink-3); line-height: 1.4; }
+.nx-wc-auth-cta { margin-left: auto; flex: none; align-self: center; padding: 7px 11px; border-radius: 8px; border: 1px solid rgba(70,224,255,.4); background: rgba(70,224,255,.08); color: var(--cyan, #46e0ff);
+  font: 700 10px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: background .15s, border-color .15s; white-space: nowrap; }
+.nx-wc-auth-cta:hover { background: rgba(70,224,255,.16); border-color: rgba(70,224,255,.6); }
 .nx-wc-credit-head { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-3); margin-bottom: 8px; }
 .nx-wc-credit-head b { color: var(--ink); }
 .nx-wc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -3232,3 +3253,158 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* New-chat button at the top of the console rail */
+.nx-rail-top { display: flex; justify-content: flex-end; padding: 0 2px 8px; }
+.nx-newchat { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: border-color .15s, color .15s; }
+.nx-newchat:hover:not(:disabled) { border-color: var(--accent); color: var(--ink); }
+.nx-newchat:disabled { opacity: .45; cursor: default; }
+
+/* ---- GMX live Inspect modal (portaled to body) -------------------------------------------------- */
+.nx-inspect-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgb(8 8 12 / 62%); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.nx-inspect {
+  width: min(720px, 96vw); max-height: 92vh; overflow-y: auto;
+  background: var(--panel, #101010); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 55%); padding: 18px 18px 16px;
+  display: grid; gap: 14px;
+}
+.nx-inspect-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.nx-inspect-sym { display: flex; align-items: center; gap: 10px; }
+.nx-inspect-sym b { font-size: 18px; color: var(--ink); letter-spacing: 0.01em; }
+.nx-inspect-logic { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-top: 6px; }
+.nx-inspect-x { background: none; border: 1px solid var(--line); color: var(--ink-2); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; flex: none; }
+.nx-inspect-x:hover { color: var(--ink); border-color: var(--accent); }
+
+.nx-inspect-pnl { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: stretch; }
+.nx-inspect-pnl-main { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 4px; align-content: center; }
+.nx-inspect-pnl-main span { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.nx-inspect-pnl-main b { font-size: 26px; line-height: 1.1; }
+.nx-inspect-pnl-main em { font-style: normal; font-family: var(--mono); font-size: 12px; }
+.nx-inspect-pnl-main.up b, .nx-inspect-pnl-main.up em { color: #16e0b0; }
+.nx-inspect-pnl-main.down b, .nx-inspect-pnl-main.down em { color: #ff3b53; }
+.nx-inspect-pnl-main.up { border-color: rgba(22, 224, 176, 0.35); background: rgba(22, 224, 176, 0.05); }
+.nx-inspect-pnl-main.down { border-color: rgba(255, 59, 83, 0.32); background: rgba(255, 59, 83, 0.05); }
+.nx-inspect-pnl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.nx-inspect-pnl-grid > div { background: var(--panel, #101010); padding: 11px 12px; display: grid; gap: 4px; }
+.nx-inspect-pnl-grid span { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.nx-inspect-pnl-grid b { font-size: 14px; color: var(--ink); font-family: var(--mono); }
+.nx-inspect-pnl-grid b.warn { color: var(--gold, #ffce3a); }
+
+.nx-inspect-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.nx-inspect-card-head span:first-child { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); }
+.nx-inspect-card-head .muted { font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; color: var(--ink-3); }
+.nx-inspect-chart, .nx-inspect-fills { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.nx-inspect-empty { font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding: 28px 8px; text-align: center; }
+
+.nx-inspect-fill-list { display: grid; gap: 1px; background: var(--line); border-radius: 8px; overflow: hidden; }
+.nx-inspect-fill { display: grid; grid-template-columns: 1.3fr 0.8fr 1fr 1.4fr auto; gap: 8px; align-items: center; background: var(--panel, #101010); padding: 8px 10px; font-size: 12px; color: var(--ink); }
+.nx-inspect-fill .muted { color: var(--ink-3); font-size: 11px; }
+.nx-inspect-fill-ev { font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--cyan); text-transform: uppercase; }
+.nx-inspect-link { color: var(--cyan); text-decoration: none; font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+.nx-inspect-link:hover { text-decoration: underline; }
+
+.nx-inspect-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.nx-inspect-links { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.nx-inspect-links .muted { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.nx-inspect-cta { color: var(--accent); text-decoration: none; font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; border: 1px solid rgba(255, 90, 31, 0.4); border-radius: 8px; padding: 7px 12px; }
+.nx-inspect-cta:hover { background: rgba(255, 90, 31, 0.08); }
+@media (max-width: 560px) {
+  .nx-inspect-pnl { grid-template-columns: 1fr; }
+  .nx-inspect-fill { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Execute: nav launcher + compact cross-chain strategy pop-up ─────────────────── */
+.nx-nav-exec { margin-top: 6px; color: #ffd27a; }
+.nx-nav-exec svg { width: 18px; height: 18px; }
+.nx-nav-exec em { font-style: normal; font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; color: #8a90a0; margin-left: 6px; padding: 1px 5px; border: 1px solid rgba(255,255,255,.14); border-radius: 999px; }
+
+/* Execute step rows — inside the standard widget modal (.nx-modal); match its row aesthetic. */
+.nx-xm-glyph { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: #07090c; border: 1px solid var(--line); color: #fff; font-size: 13px; }
+.nx-md-kv b small { font-weight: 500; }
+
+.nx-xs-steps { display: grid; gap: 8px; }
+.nx-xs-step {
+  display: grid; grid-template-columns: 20px 26px minmax(0,1fr) auto auto; align-items: center; gap: 11px;
+  padding: 9px 11px; border-radius: 4px; border: 1px solid var(--line); background: rgba(255,255,255,.015);
+  transition: border-color .2s, box-shadow .2s;
+}
+.nx-xs-step.confirmed { border-color: rgba(70,224,255,.45); box-shadow: 0 0 0 1px rgba(70,224,255,.1); }
+.nx-xs-step.submitted, .nx-xs-step.active { border-color: rgba(255,170,70,.5); }
+.nx-xs-step.failed { border-color: rgba(255,90,31,.5); }
+.nx-xs-n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700; color: var(--ink-3); border: 1px solid var(--line); }
+.nx-xs-step.confirmed .nx-xs-n { color: #07090c; background: var(--cyan, #46e0ff); border-color: transparent; }
+.nx-xs-ico { display: inline-flex; align-items: center; }
+.nx-xs-mid { min-width: 0; }
+.nx-xs-mid b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nx-xs-mid em { font-style: normal; font-size: 11px; color: var(--ink-3); }
+.nx-xs-cost { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.nx-xs-spend { font-size: 13px; font-weight: 700; color: var(--ink); }
+.nx-xs-fee { font-size: 10px; color: var(--ink-3); }
+.nx-xs-tx { color: inherit; text-decoration: none; }
+.nx-xs-foot { display: grid; gap: 9px; }
+.nx-xs-cta { width: 100%; }
+.nx-xs-note { font-size: 11px; text-align: center; color: var(--ink-3); }
+@media (max-width: 560px) { .nx-xs-step { grid-template-columns: 20px 26px minmax(0,1fr) auto; } .nx-xs-step .nx-lt-pill { grid-column: 1 / -1; justify-self: start; } }
+
+/* Execute widget — balance hero. The user's live USDC on Arbitrum, the funding source. */
+.nx-xc-bal {
+  display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 13px;
+  padding: 13px 15px; border-radius: 6px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(70,224,255,.05), rgba(70,224,255,.012));
+}
+.nx-xc-bal.low { background: linear-gradient(180deg, rgba(255,170,70,.06), rgba(255,170,70,.012)); border-color: rgba(255,170,70,.3); }
+.nx-xc-bal-ico { display: inline-flex; }
+.nx-xc-bal-main { min-width: 0; display: grid; gap: 3px; }
+.nx-xc-bal-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3); }
+.nx-xc-bal-val { font-size: 23px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); line-height: 1.05; }
+.nx-xc-bal-val small { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.nx-xc-bal-val.nx-xc-bal-dim { color: var(--ink-3); }
+.nx-xc-bal-side { display: grid; gap: 4px; justify-items: end; text-align: right; }
+.nx-xc-bal-wallet { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.nx-xc-bal-ok { font-size: 10px; color: var(--cyan, #46e0ff); }
+.nx-xc-bal-warn { font-size: 10px; color: #ffaa46; }
+
+/* Execute widget — two-chain selectable balance hero (Arbitrum + Base). */
+.nx-xc-bal2 { border: 1px solid var(--line); border-radius: 6px; padding: 11px 12px; background: linear-gradient(180deg, rgba(70,224,255,.04), rgba(70,224,255,.01)); display: grid; gap: 9px; }
+.nx-xc-bal2-head { display: flex; align-items: center; justify-content: space-between; }
+.nx-xc-bal2-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.nx-xc-bal2-tile { display: grid; gap: 3px; padding: 9px 11px; border-radius: 6px; border: 1px solid var(--line); background: rgba(255,255,255,.014); cursor: pointer; text-align: left; transition: border-color .15s, background .15s; }
+.nx-xc-bal2-tile:hover { border-color: rgba(70,224,255,.35); }
+.nx-xc-bal2-tile.on { border-color: rgba(70,224,255,.55); background: rgba(70,224,255,.08); box-shadow: 0 0 0 1px rgba(70,224,255,.12); }
+.nx-xc-bal2-tile.low { border-color: rgba(255,170,70,.45); }
+.nx-xc-bal2-chain { display: inline-flex; align-items: center; gap: 6px; font: 700 10.5px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: .04em; color: var(--ink-2); text-transform: uppercase; }
+.nx-xc-bal2-val { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.1; letter-spacing: -.01em; }
+.nx-xc-bal2-val small { font-size: 10px; font-weight: 600; color: var(--ink-3); }
+.nx-xc-bal2-note { font-size: 9.5px; color: var(--ink-3); }
+.nx-xc-bal2-tile.low .nx-xc-bal2-note { color: #ffaa46; }
+.nx-xc-bal2-warn { display: block; }
+
+/* Execute widget — spend & cost stat tiles. */
+.nx-xc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.nx-xc-stat { display: grid; gap: 3px; padding: 10px 11px; border-radius: 5px; border: 1px solid var(--line); background: rgba(255,255,255,.014); }
+.nx-xc-stat-k { font-family: var(--mono); font-size: 9px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-3); }
+.nx-xc-stat-v { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.nx-xc-stat-v small { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.nx-xc-stat-s { font-size: 10px; color: var(--ink-3); }
+@media (max-width: 560px) { .nx-xc-stats { grid-template-columns: repeat(2, 1fr); } .nx-xc-bal { grid-template-columns: 34px minmax(0,1fr); } .nx-xc-bal-side { grid-column: 1 / -1; justify-items: start; text-align: left; } }
+
+/* Authority badge — shows which MetaMask path authorized the agent (Smart Account grant vs funding). */
+.nx-xc-auth-badge { align-self: flex-start; padding: 4px 9px; border-radius: 6px; border: 1px solid rgba(70,224,255,.4); background: rgba(70,224,255,.08); color: var(--cyan, #46e0ff);
+  font: 700 9px var(--font-display, "Chakra Petch", sans-serif); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+
+/* Circle CCTP brand mark for the bridge leg. */
+.nx-xc-circle { display: inline-grid; place-items: center; border-radius: 50%; background: linear-gradient(160deg, #3ec46d, #1f9d52); box-shadow: 0 0 0 1px rgba(62,196,109,.4); }
+
+/* Agent-building skeleton placeholders (shown until the plan + accounts load). */
+.nx-xc-skrow { opacity: .8; }
+.nx-xc-sk-dot { width: 26px; height: 26px; border-radius: 7px; }
+.nx-xc-sk-line, .nx-xc-sk-dot { display: inline-block; background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.1), rgba(255,255,255,.04)); background-size: 200% 100%; animation: nx-xc-shim 1.3s ease-in-out infinite; border-radius: 4px; }
+.nx-xc-sk-line { height: 10px; margin: 2px 0; }
+.nx-xc-sk-line.w120 { width: 120px; height: 22px; } .nx-xc-sk-line.w70 { width: 70%; } .nx-xc-sk-line.w50 { width: 50px; } .nx-xc-sk-line.w40 { width: 40%; }
+@keyframes nx-xc-shim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

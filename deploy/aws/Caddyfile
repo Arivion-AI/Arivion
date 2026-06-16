@@ -1,0 +1,4 @@
+arivion.xyz, www.arivion.xyz {
+  encode zstd gzip
+  reverse_proxy frontend:3000
+}

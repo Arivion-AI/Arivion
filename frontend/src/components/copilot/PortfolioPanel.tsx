@@ -29,6 +29,12 @@ type GmxOrder = {
   symbol?: string; direction?: string; size_usd?: number; leverage?: number; status?: string;
   strategy_id?: string | null; bot_type?: string | null; chain_id?: number; submitted_at?: string;
 };
+type StockHolding = { symbol: string; balance: string; valueUsd: string; priceUsd: string; fresh?: boolean };
+type StocksResp = { ok?: boolean; usdBalance?: string; stocks?: StockHolding[] };
+type SOrder = { id: string; kind: string; side: string; legs: Array<{ symbol: string; usdg?: number; stock?: number }>; trigger_price_1e8?: string | null; comparator?: string | null; state: string; created_by: string };
+type SDca = { id: string; legs: Array<{ symbol: string; usdg: number }>; usdg_per_run: string; interval_seconds: string; runs_done: number; max_runs?: number | null; state: string; created_by: string };
+type SEvent = { id: string; order_id?: string | null; bot_id?: string | null; action: string; detail?: string | null; tx?: string | null; ts: string };
+type OrdersResp = { ok?: boolean; orders?: SOrder[]; bots?: SDca[]; events?: SEvent[] };
 
 const ARB_ONE = 42161, ARB_SEPOLIA = 421614;
 const num = (v: unknown): number | null => { const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -84,22 +90,28 @@ export default function PortfolioPanel({ wallets, agentWallet }: { wallets: Link
   const [positions, setPositions] = useState<Position[]>([]);
   const [lp, setLp] = useState<LpPos[]>([]);
   const [gmx, setGmx] = useState<GmxOrder[]>([]);
+  const [stocks, setStocks] = useState<StockHolding[]>([]);
+  const [orders, setOrders] = useState<OrdersResp | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const lpWallets = [...wallets.map((w) => ({ addr: w.wallet_address, chain: ARB_ONE })), agentWallet ? { addr: agentWallet.address, chain: ARB_SEPOLIA } : null].filter(Boolean) as Array<{ addr: string; chain: number }>;
-    const [pos, gmxResp, ...lpResps] = await Promise.all([
+    const [pos, gmxResp, stk, ord, ...lpResps] = await Promise.all([
       copilotGet<{ positions: Position[] }>("/positions").catch(() => null),
       netrunnersGet<{ orders: GmxOrder[] }>("/api/gmx/live/sessions").catch(() => null),
+      netrunnersGet<StocksResp>("/api/exec/stocks").catch(() => null),
+      netrunnersGet<OrdersResp>("/api/exec/orders").catch(() => null),
       ...lpWallets.map((w) => netrunnersGet<{ positions: LpPos[] }>(`/api/dex/lp/positions?wallet=${encodeURIComponent(w.addr)}&chainId=${w.chain}`).catch(() => null)),
     ]);
     setPositions(pos?.positions ?? []);
     setGmx(gmxResp?.orders ?? []);
+    setStocks((stk?.stocks ?? []).filter((s) => Number(s.balance) > 0));
+    setOrders(ord ?? null);
     setLp(lpResps.flatMap((r) => r?.positions ?? []));
     setLoading(false);
   }, [wallets, agentWallet]);
 
-  useEffect(() => { void load(); }, [load]);
+  // Poll so trades/orders/fills show up without a manual refresh.
+  useEffect(() => { void load(); const t = window.setInterval(() => void load(), 12000); return () => window.clearInterval(t); }, [load]);
 
   const totals = useMemo(() => {
     const closed = positions.filter((p) => p.state === "closed" && p.realized_return != null);
@@ -108,17 +120,20 @@ export default function PortfolioPanel({ wallets, agentWallet }: { wallets: Link
     const t = agentWallet?.tokens;
     const stable = (num(t?.arbitrumSepolia?.dUSDC) ?? 0) + (num(t?.robinhood?.mockUsdG) ?? 0);
     const lpValue = lp.reduce((s, p) => s + (num(p.currentValueUsd) ?? 0), 0);
+    const stockValue = stocks.reduce((s, h) => s + (num(h.valueUsd) ?? 0), 0);
     const avgClosed = closed.length ? closed.reduce((s, p) => s + (p.realized_return ?? 0), 0) / closed.length : null;
     return {
-      value: stable + lpValue,
+      value: stable + lpValue + stockValue,
+      stockValue,
       openCount: open.length,
       closedCount: closed.length,
       winRate: closed.length ? wins / closed.length : null,
       avgClosed,
       lpCount: lp.length,
+      stockCount: stocks.length,
       aiCount: positions.filter((p) => decidedBy(p.run_id) === "ai").length,
     };
-  }, [positions, lp, agentWallet]);
+  }, [positions, lp, agentWallet, stocks]);
 
   const equityCurve = useMemo(() => {
     const closed = positions.filter((p) => p.state === "closed" && p.realized_return != null)
@@ -140,20 +155,29 @@ export default function PortfolioPanel({ wallets, agentWallet }: { wallets: Link
     for (const o of gmx) {
       if (o.submitted_at) items.push({ ts: o.submitted_at, kind: "gmx", by: o.strategy_id || o.bot_type ? "ai" : "user", text: `GMX ${o.direction ?? ""} ${o.symbol ?? ""} ${o.size_usd ? "$" + Math.round(o.size_usd) : ""} ${o.leverage ? o.leverage + "×" : ""}`.trim() });
     }
+    const orderById = new Map((orders?.orders ?? []).map((o) => [o.id, o]));
+    const botById = new Map((orders?.bots ?? []).map((b) => [b.id, b]));
+    for (const e of orders?.events ?? []) {
+      const by: "ai" | "user" = (e.order_id && orderById.get(e.order_id)?.created_by === "copilot") || (e.bot_id && botById.get(e.bot_id)?.created_by === "copilot") ? "ai" : "user";
+      items.push({ ts: e.ts, kind: "order", by, tone: e.action.includes("fail") ? "down" : "up", text: `${e.action.replace(/_/g, " ")}${e.detail ? ` — ${e.detail}` : ""}` });
+    }
     return items.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 24);
-  }, [positions, gmx]);
+  }, [positions, gmx, orders]);
+
+  const openOrders = (orders?.orders ?? []).filter((o) => o.state === "pending" || o.state === "filling");
+  const activeBots = (orders?.bots ?? []).filter((b) => b.state === "active" || b.state === "paused");
 
   if (loading) return <div className="nx-pf"><div className="nx-pf-loading">Loading portfolio…</div></div>;
 
-  const empty = !positions.length && !lp.length && !gmx.length;
+  const empty = !positions.length && !lp.length && !gmx.length && !stocks.length && !openOrders.length && !activeBots.length;
 
   return (
     <div className="nx-pf">
       {/* KPI strip */}
       <div className="nx-pf-kpis">
         <div className="nx-pf-kpi"><span>Portfolio value</span><b>{fmtUsd(totals.value)}</b></div>
-        <div className="nx-pf-kpi"><span>Win rate</span><b>{totals.winRate == null ? "—" : fmtPct(totals.winRate)}</b></div>
-        <div className="nx-pf-kpi"><span>Avg closed P/L</span><b><Signed frac={totals.avgClosed} /></b></div>
+        <div className="nx-pf-kpi"><span>Stock holdings</span><b>{fmtUsd(totals.stockValue)}<em> · {totals.stockCount}</em></b></div>
+        <div className="nx-pf-kpi"><span>Open orders / bots</span><b>{openOrders.length}<em> / {activeBots.length}</em></b></div>
         <div className="nx-pf-kpi"><span>Open positions</span><b>{totals.openCount}</b></div>
         <div className="nx-pf-kpi"><span>LP positions</span><b>{totals.lpCount}</b></div>
         <div className="nx-pf-kpi"><span>AI-decided</span><b>{totals.aiCount}<em> / {positions.length}</em></b></div>
@@ -163,7 +187,7 @@ export default function PortfolioPanel({ wallets, agentWallet }: { wallets: Link
       {empty ? (
         <div className="nx-pf-empty-all">
           <h3>No activity yet</h3>
-          <p>Once you open a managed position, provide LP, or execute on testnet, your trades — and whether you or Nexa decided them — show up here.</p>
+          <p>Once you open a managed position, provide LP, or execute on testnet, your trades — and whether you or Arivion decided them — show up here.</p>
         </div>
       ) : null}
 
@@ -189,6 +213,54 @@ export default function PortfolioPanel({ wallets, agentWallet }: { wallets: Link
           </table>
         ) : <div className="nx-pf-empty">No trades yet.</div>}
       </section>
+
+      {/* Stock holdings */}
+      <section className="nx-pf-card">
+        <div className="nx-md-h">Stock holdings (Robinhood Chain)</div>
+        {stocks.length ? (
+          <table className="nx-md-table nx-pf-table">
+            <thead><tr><th>Asset</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead>
+            <tbody>
+              {stocks.map((h) => (
+                <tr key={h.symbol}>
+                  <td><AssetIcon symbol={h.symbol} kind="stock" /></td>
+                  <td>{Number(h.balance).toLocaleString(undefined, { maximumFractionDigits: 5 })}</td>
+                  <td>{fmtUsd(num(h.priceUsd) ?? 0)}</td>
+                  <td><b>{fmtUsd(num(h.valueUsd) ?? 0)}</b></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : <div className="nx-pf-empty">No tokenized-stock holdings yet — buy on the Markets tab.</div>}
+      </section>
+
+      {/* Open orders & bots */}
+      {openOrders.length || activeBots.length ? (
+        <section className="nx-pf-card">
+          <div className="nx-md-h">Open orders &amp; bots</div>
+          <table className="nx-md-table nx-pf-table">
+            <thead><tr><th>Type</th><th>Detail</th><th>State</th><th>Decided by</th></tr></thead>
+            <tbody>
+              {openOrders.map((o) => (
+                <tr key={o.id}>
+                  <td>{o.kind === "basket" ? "Basket" : `${o.side} limit`}</td>
+                  <td>{o.kind === "basket" ? `${o.legs.length} legs` : `${o.legs[0]?.symbol ?? ""} ${o.trigger_price_1e8 != null ? `${o.comparator === "gte" ? "≥" : "≤"} $${(Number(o.trigger_price_1e8) / 1e8).toFixed(2)}` : ""}`}</td>
+                  <td><span className="nx-chip ghost">{o.state}</span></td>
+                  <td><DecidedBadge by={o.created_by === "copilot" ? "ai" : "user"} /></td>
+                </tr>
+              ))}
+              {activeBots.map((b) => (
+                <tr key={b.id}>
+                  <td>DCA</td>
+                  <td>{b.legs.map((l) => l.symbol).join("+")} · ${Number(b.usdg_per_run).toFixed(0)}/{Number(b.interval_seconds) % 86400 === 0 ? `${Number(b.interval_seconds) / 86400}d` : `${Math.round(Number(b.interval_seconds) / 3600)}h`} · {b.runs_done}{b.max_runs ? `/${b.max_runs}` : ""} runs</td>
+                  <td><span className="nx-chip ghost">{b.state}</span></td>
+                  <td><DecidedBadge by={b.created_by === "copilot" ? "ai" : "user"} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       {/* LP */}
       <section className="nx-pf-card">

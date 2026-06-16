@@ -13,6 +13,9 @@ import { openManagedPosition } from "../positions/open.js";
 import { listIntents } from "../positions/store.js";
 import { ExitPolicySchema } from "../positions/exitPolicy.js";
 import { getOwnerSettings } from "../settings/index.js";
+import { getRiskState } from "../risk/index.js";
+import { checkBudget } from "../budget/index.js";
+import { config } from "../config.js";
 import { runMultiassetProposal, startMultiassetPaper, composeLegs, type MultiassetParams, type RiskAppetite, type AssetClass } from "../multiasset/setup.js";
 import { scanMarket, marketOverview, type ScanSort } from "../market/scanner.js";
 import { fetchTokenNews } from "../news/feeds.js";
@@ -431,8 +434,72 @@ export async function buildChatTools(mcp: McpToolSource): Promise<ToolSpec[]> {
   return [...readTools, ...AGENT_TOOLS];
 }
 
+const PLACE_LIMIT_ORDER: ToolSpec = {
+  name: "place_limit_order",
+  description: "Place a tokenized-stock LIMIT order on Robinhood Chain testnet (TSLA/AMZN/PLTR/NFLX/AMD). It fills automatically when the on-chain oracle price crosses the trigger (buy → price ≤ trigger, sell → price ≥ trigger). GUARDED: requires the owner's autonomy to be L2+, risk state normal, and daily budget within caps — otherwise returns blocked.",
+  parameters: {
+    type: "object",
+    properties: {
+      symbol: { type: "string", description: "Stock ticker, e.g. TSLA" },
+      side: { type: "string", enum: ["buy", "sell"] },
+      trigger_price: { type: "number", description: "USD oracle price that arms the fill" },
+      usdg: { type: "number", description: "USD to spend (buy side)" },
+      stock: { type: "number", description: "Shares to sell (sell side)" },
+      expires_in_sec: { type: "number" },
+    },
+    required: ["symbol", "trigger_price"],
+  },
+};
+const PLACE_BASKET: ToolSpec = {
+  name: "place_basket",
+  description: "Buy a multi-stock BASKET in one action on Robinhood Chain testnet (fills on the next engine tick, ~30s). GUARDED: requires autonomy L2+, risk normal, budget ok.",
+  parameters: {
+    type: "object",
+    properties: {
+      legs: { type: "array", items: { type: "object", properties: { symbol: { type: "string" }, usdg: { type: "number" } }, required: ["symbol", "usdg"] } },
+    },
+    required: ["legs"],
+  },
+};
+const START_DCA_BOT: ToolSpec = {
+  name: "start_dca_bot",
+  description: "Start a DCA bot that recurrently buys tokenized stock(s) every interval on Robinhood Chain testnet. GUARDED: requires autonomy L2+, risk normal, budget ok.",
+  parameters: {
+    type: "object",
+    properties: {
+      legs: { type: "array", items: { type: "object", properties: { symbol: { type: "string" }, usdg: { type: "number" } }, required: ["symbol", "usdg"] } },
+      interval_seconds: { type: "number" },
+      max_runs: { type: "number" },
+    },
+    required: ["legs", "interval_seconds"],
+  },
+};
+
+// Owner-token authed POST to the API (same Bearer the MCP path forwards). Used by the guarded order tools.
+async function apiPost(path: string, body: unknown, ownerToken?: string): Promise<unknown> {
+  const res = await fetch(`${config.apiBaseUrl}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(ownerToken ? { authorization: `Bearer ${ownerToken}` } : {}) },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20_000),
+  });
+  return res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+}
+
+// Shared guardrail for stock order placement — mirrors openManagedPosition's L2+ → risk → budget gates.
+async function guardStockExec(ownerId: number): Promise<string | null> {
+  const settings = await getOwnerSettings(ownerId);
+  const autonomy = settings.autonomy_level === "L2" || settings.autonomy_level === "L3" ? "L2" : "L1";
+  if (autonomy !== "L2") return "orders require autonomy L2+ (raise it in kill-switch settings)";
+  const risk = await getRiskState(ownerId);
+  if (risk.state !== "normal") return `risk_state=${risk.state}: ${risk.reason ?? "new entries paused"}`;
+  const budget = await checkBudget(ownerId, "live_session");
+  if (!budget.ok) return budget.reason ?? "daily budget cap reached";
+  return null;
+}
+
 // The agent-native (non-MCP) actions chat always gets, on top of the dynamic read catalog.
-const AGENT_TOOLS: ToolSpec[] = [BUILD_AND_BACKTEST, LAUNCH_TESTNET_PLAN, RESEARCH_WEB, ANALYZE_SYMBOL, OPEN_MANAGED_POSITION, LIST_POSITIONS, SETUP_MULTIASSET, START_MULTIASSET, SCREEN_TOKENS, SCAN_MARKET, MARKET_OVERVIEW, TOKEN_NEWS, DUNE_QUERY, COMPARE_POOLS, SCREEN_LPS, ANALYZE_LP, GMX_MARKET, BACKTEST_LP, GMX_STRATEGY, GMX_WIZARD, GLV_VAULTS, MARKET_SENTIMENT, POSITIONS_REVIEW, ADD_KNOWLEDGE, LIST_KNOWLEDGE, FORGET_KNOWLEDGE, SEARCH_KNOWLEDGE, DISCOVERY_INTAKE, REASON_PORTFOLIO, ASK_USER];
+const AGENT_TOOLS: ToolSpec[] = [BUILD_AND_BACKTEST, LAUNCH_TESTNET_PLAN, RESEARCH_WEB, ANALYZE_SYMBOL, OPEN_MANAGED_POSITION, LIST_POSITIONS, SETUP_MULTIASSET, START_MULTIASSET, PLACE_LIMIT_ORDER, PLACE_BASKET, START_DCA_BOT, SCREEN_TOKENS, SCAN_MARKET, MARKET_OVERVIEW, TOKEN_NEWS, DUNE_QUERY, COMPARE_POOLS, SCREEN_LPS, ANALYZE_LP, GMX_MARKET, BACKTEST_LP, GMX_STRATEGY, GMX_WIZARD, GLV_VAULTS, MARKET_SENTIMENT, POSITIONS_REVIEW, ADD_KNOWLEDGE, LIST_KNOWLEDGE, FORGET_KNOWLEDGE, SEARCH_KNOWLEDGE, DISCOVERY_INTAKE, REASON_PORTFOLIO, ASK_USER];
 
 export interface ToolCtx {
   ownerId: number;
@@ -620,6 +687,38 @@ export async function executeChatTool(name: string, argsJson: string, ctx: ToolC
     if (res.status === "awaiting_approval") return `Opening ${args.symbol} needs your approval first (run ${res.runId}). Approve it to open the position with its exit policy bound.`;
     if (res.status === "blocked") return `Could not open: ${res.reason ?? "blocked"} (run ${res.runId}).`;
     return `Position OPENED (run ${res.runId}, intent ${res.intent?.id}). Exit policy is bound and the monitor now manages it autonomously. ${brief(res.intent?.exit_policy, 500)}`;
+  }
+
+  if (name === "place_limit_order") {
+    const block = await guardStockExec(ctx.ownerId);
+    if (block) return `Could not place limit order — ${block}.`;
+    const side = args.side === "sell" ? "sell" : "buy";
+    const r = await apiPost("/api/exec/orders", {
+      kind: "limit", side, triggerPrice: Number(args.trigger_price),
+      legs: [{ symbol: String(args.symbol ?? ""), usdg: args.usdg != null ? Number(args.usdg) : undefined, stock: args.stock != null ? Number(args.stock) : undefined }],
+      expiresInSec: args.expires_in_sec != null ? Number(args.expires_in_sec) : undefined,
+      createdBy: "copilot",
+    }, ctx.ownerToken);
+    return brief(r, 900);
+  }
+
+  if (name === "place_basket") {
+    const block = await guardStockExec(ctx.ownerId);
+    if (block) return `Could not place basket — ${block}.`;
+    const legs = Array.isArray(args.legs) ? args.legs : [];
+    const r = await apiPost("/api/exec/orders", { kind: "basket", side: "buy", legs, createdBy: "copilot" }, ctx.ownerToken);
+    return brief(r, 900);
+  }
+
+  if (name === "start_dca_bot") {
+    const block = await guardStockExec(ctx.ownerId);
+    if (block) return `Could not start DCA bot — ${block}.`;
+    const legs = Array.isArray(args.legs) ? args.legs : [];
+    const r = await apiPost("/api/exec/dca", {
+      legs, intervalSeconds: Number(args.interval_seconds),
+      maxRuns: args.max_runs != null ? Number(args.max_runs) : undefined, createdBy: "copilot",
+    }, ctx.ownerToken);
+    return brief(r, 900);
   }
 
   if (name === "list_positions") {

@@ -56,6 +56,12 @@ What you can do:
 - launch_testnet_plan — only when the user explicitly asks to execute/go live on testnet. It can
   execute currently wired Robinhood/Duality AMM testnet legs; GMX execution is blocked until the GMX
   Arbitrum Sepolia adapter is wired. Never claim GMX was executed unless the tool result says so.
+- place_limit_order / place_basket / start_dca_bot — tokenized-stock orders on Robinhood Chain testnet
+  (TSLA/AMZN/PLTR/NFLX/AMD). place_limit_order rests until the on-chain oracle crosses the trigger;
+  place_basket buys several stocks at once; start_dca_bot buys on a recurring interval. ALL are GUARDED:
+  they require the owner's autonomy to be L2+, risk state normal, and budget within caps, and return
+  "Could not …" with the reason when blocked. Only place these when the user clearly asks to set up an
+  order/bot; state the trigger/amount you used.
 
 When the user asks which tokens/coins are best to invest in or buy, call screen_tokens (NOT bare
 scan_market) — never guess. First ASK their selection style via ask_user (Quality / Balanced / Momentum)
@@ -91,20 +97,30 @@ Hard truths you must respect:
 When a tool returns results, summarize them plainly for the user.`;
 
 function providerSupportsToolCalling(provider: string): boolean {
-  // OpenAI chat-completions tool calls are wired in providerRouter. Anthropic is text-only today, so
-  // using it for the actor makes Copilot sound smart but unable to act.
-  return provider === "openai";
+  // Venice (OpenAI-compatible) and OpenAI chat-completions tool calls are wired in providerRouter.
+  // Anthropic is text-only here, so using it for the actor makes Copilot sound smart but unable to act.
+  return provider === "venice" || provider === "openai";
 }
 
 async function pickToolCapableActor(currentProvider: string, currentModel: string): Promise<{ provider: string; model: string; switched: boolean }> {
   if (providerSupportsToolCalling(currentProvider)) return { provider: currentProvider, model: currentModel, switched: false };
-  if (!isConfigured("openai")) return { provider: currentProvider, model: currentModel, switched: false };
+  // Pick a tool-capable actor with a managed price row, honoring COPILOT_DEFAULT_PROVIDER. OpenAI
+  // (gpt-5-mini) is the default — reliable tool-calling; Venice is opt-in via the env. Try the
+  // configured default first, then the other as fallback.
   const catalog = await getManagedCatalog().catch(() => []);
-  const openai = catalog.find((c) => c.provider === "openai" && c.model === "gpt-5-mini")
-    ?? catalog.find((c) => c.provider === "openai");
-  return openai
-    ? { provider: openai.provider, model: openai.model, switched: true }
-    : { provider: currentProvider, model: currentModel, switched: false };
+  const tryOpenAI = () => {
+    if (!isConfigured("openai")) return null;
+    const m = catalog.find((c) => c.provider === "openai" && c.model === "gpt-5-mini") ?? catalog.find((c) => c.provider === "openai");
+    return m ? { provider: m.provider, model: m.model, switched: true } : null;
+  };
+  const tryVenice = () => {
+    if (!isConfigured("venice")) return null;
+    const m = catalog.find((c) => c.provider === "venice" && c.model === config.veniceModel) ?? catalog.find((c) => c.provider === "venice");
+    return m ? { provider: m.provider, model: m.model, switched: true } : null;
+  };
+  const order = config.defaultProvider === "venice" ? [tryVenice, tryOpenAI] : [tryOpenAI, tryVenice];
+  for (const pick of order) { const r = pick(); if (r) return r; }
+  return { provider: currentProvider, model: currentModel, switched: false };
 }
 
 function renderToolUsePolicy(userText: string, hasTools: boolean): string {

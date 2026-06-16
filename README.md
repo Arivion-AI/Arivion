@@ -2,9 +2,9 @@
 
 Arivion is an agentic quant lab for designing, testing, and operating crypto, tokenized-stock, liquidity, and GMX trading workflows from one owner-scoped command surface.
 
-The repository combines a Next.js trading cockpit, an agentic Copilot service, a PNPM and Python quant workspace, market-data ingestion, paper execution, verification, on-chain testnet execution, and guarded GMX v2 live trading routes.
+The repository combines a Next.js trading cockpit, an agentic Copilot service, a PNPM and Python quant workspace, market-data ingestion, paper execution, verification, and **mainnet cross-chain execution through MetaMask Smart Accounts and the 1Shot Permissionless Relayer** — across Arbitrum One and Base, with gas paid in USDC and guarded GMX v2 live routes.
 
-Arivion is built around one principle: the agent can reason and act, but every action must carry proof, scope, and guardrails. Backtests report fill fidelity. Testnet transactions return transaction hashes. GMX live actions require explicit confirmations, environment kill switches, caps, and owner-scoped ledgers.
+Arivion is built around one principle: the agent can reason and act, but every action must carry proof, scope, and guardrails. Backtests report fill fidelity. On-chain transactions return real per-chain transaction hashes. Agent execution is authorized by **scoped, revocable MetaMask Smart Account permissions** and relayed with gas in USDC — Arivion never holds the user's keys. GMX live actions require explicit confirmations, kill switches, caps, and owner-scoped ledgers.
 
 ## Status
 
@@ -57,11 +57,45 @@ The primary runtime flow is:
 
 1. The user signs in and opens the Netrunners Copilot UI.
 2. The browser calls the Next.js proxy at `/api/copilot/*`.
-3. The proxy exchanges the Privy access token for an owner JWT through the Lab API.
+3. The proxy exchanges the user's MetaMask Sign-In-With-Ethereum session for an owner JWT through the Lab API.
 4. The proxy forwards the owner JWT to the agent service.
 5. The agent creates or resumes a thread, starts a run, builds context, and enters the LLM/tool loop.
 6. The agent emits run events, widgets, messages, approvals, and truth cards over SSE.
 7. The UI renders those events into the Nexa board, chat rail, panels, and live trading views.
+
+## Mainnet Execution — MetaMask Smart Accounts + 1Shot, Cross-Chain, Gas in USDC
+
+Arivion's on-chain execution is built end to end on `@metamask/smart-accounts-kit`, executed through the **1Shot Permissionless Relayer** across **Arbitrum One and Base**. This is the trust + execution layer behind the Execute flow.
+
+### Trust layer — user-controlled, scoped, revocable
+
+- **Login ≠ authority.** Users sign in with MetaMask via Sign-In-With-Ethereum (EIP-4361). This proves wallet ownership but authorizes nothing.
+- **EIP-7702 upgrade-in-place.** The user's existing EOA is upgraded to a `Stateless7702` MetaMask Smart Account at the **same address** — they keep their USDC, identity, and history. No migration, no new wallet to fund.
+- **ERC-7715 Advanced Permissions.** The user grants the agent a scoped `erc20-token-periodic` allowance in MetaMask's native flow — e.g. *up to 5 USDC/day, with expiry and adjustable limits*. No USDC moves at approval time; no key is ever shared.
+- **EIP-7710 FunctionCall caveats.** When the agent executes, it redelegates a **narrower** slice of that authority to the 1Shot relayer, scoped by **target contract, function selector, native-value limit, and time window** — pinned to exactly USDC, Uniswap v3, GMX's ExchangeRouter, and Circle CCTP.
+- **Revocable + auditable.** Every delegation is stored, expiring, and revocable in MetaMask; once revoked, the executor refuses to act.
+
+### Execution layer — 1Shot, gas in USDC
+
+Every transaction is an EIP-7710 `DelegationManager.redeemDelegations` call relayed by **1Shot**, with **gas paid in USDC** — the user never needs ETH and never signs again after the grant. 1Shot is also used to **upgrade a fresh EOA into a smart account through the relayer** (EIP-7702 authorization in the relayed Type-4 transaction).
+
+### One approved plan → a real cross-chain sequence
+
+1. **Pull** the granted budget into the agent's smart account (bounded by the period cap).
+2. **Provide single-sided USDC liquidity on Uniswap v3 (Arbitrum).**
+3. **Open a GMX v2 perp** — self-funding its native keeper fee by swapping a sliver of USDC → ETH.
+4. **Bridge USDC to Base via Circle CCTP** (burn → attestation → mint); the mint is self-funding (the minted USDC pays its own relayer fee).
+5. **Provide Uniswap v3 liquidity on Base.**
+
+Each leg resolves to a real on-chain transaction — surfaced with its **per-chain explorer link** (Arbiscan / BaseScan) — or a clean failure; nothing hangs.
+
+> **Proven live on Arbitrum One mainnet:** a GMX v2 perp opened via 1Shot (`redeemDelegations`, gas in USDC) and a Circle CCTP bridge that delivered USDC to Base. The full one-click 5-leg run is wired behind `DUALITY_EXEC_VIA_SMART_ACCOUNT`.
+
+### Hackathon tracks
+
+- **Best Agent** — MetaMask Smart Accounts Kit in the main execution flow (EIP-7702 + ERC-7715/7710).
+- **Best use of 1Shot Permissionless Relayer** — every leg relayed, gas in USDC, including EOA → smart-account upgrade through the relayer.
+- **Best use of Venice AI** — Venice is wired as a selectable agent brain via the LLM gateway.
 
 ## Quick Start
 

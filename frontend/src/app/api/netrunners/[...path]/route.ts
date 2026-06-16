@@ -14,60 +14,13 @@ const HOP_BY_HOP_HEADERS = new Set([
 ]);
 
 let cachedDevToken: { value: string; expiresAt: number } | null = null;
-// §25 — internal owner tokens obtained by exchanging a Privy access token, keyed by the Privy token.
-const ownerTokenByPrivy = new Map<string, { value: string; expiresAt: number }>();
-// Bound the cache: Privy access tokens rotate (~hourly), so without eviction this Map grows
-// unbounded over the life of the server process. Sweep expired entries on each exchange, and cap
-// the total size (dropping the oldest, since Map preserves insertion order) as a hard backstop.
-const OWNER_TOKEN_CACHE_MAX = 1000;
-function sweepOwnerTokenCache(now: number): void {
-  for (const [k, v] of ownerTokenByPrivy) {
-    if (v.expiresAt <= now) ownerTokenByPrivy.delete(k);
-  }
-  while (ownerTokenByPrivy.size > OWNER_TOKEN_CACHE_MAX) {
-    const oldest = ownerTokenByPrivy.keys().next().value;
-    if (oldest === undefined) break;
-    ownerTokenByPrivy.delete(oldest);
-  }
-}
-
-// §25 P1 — exchange a Privy access token (sent by the browser as `x-privy-token`) for the internal
-// owner token via POST /auth/session. The browser never holds the internal token; the proxy does.
-async function exchangePrivyToken(privyToken: string): Promise<string | null> {
-  const now = Date.now();
-  sweepOwnerTokenCache(now);
-  const cached = ownerTokenByPrivy.get(privyToken);
-  if (cached && cached.expiresAt > now) {
-    return cached.value;
-  }
-  const sessionUrl = new URL("/auth/session", runtimeNetrunnersConfig.baseUrl);
-  const resp = await fetch(sessionUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ privyToken }),
-    cache: "no-store",
-  });
-  if (!resp.ok) {
-    // Surface WHY the Privy token-exchange failed (PRIVY_TOKEN_INVALID / _EXPIRED / NOT_CONFIGURED …)
-    // instead of swallowing it — shows up in the dev server console for diagnosis.
-    const body = await resp.text().catch(() => "");
-    console.warn(`[netrunners proxy] /auth/session exchange failed: HTTP ${resp.status} ${body}`);
-    return null; // expired/invalid Privy token -> client should getAccessToken() again.
-  }
-  const json = (await resp.json()) as { ownerToken?: string };
-  if (!json.ownerToken) {
-    return null;
-  }
-  ownerTokenByPrivy.set(privyToken, { value: json.ownerToken, expiresAt: Date.now() + 5 * 60_000 });
-  return json.ownerToken;
-}
 
 async function resolveAuthHeader(req: Request): Promise<string | null> {
-  // 1) Real users: a Privy access token from the browser -> token-exchange.
-  const privyToken = req.headers.get("x-privy-token");
-  if (privyToken) {
-    const ownerToken = await exchangePrivyToken(privyToken);
-    return ownerToken ? `Bearer ${ownerToken}` : null;
+  // 1) Real users: the internal owner JWT minted by SIWE sign-in, sent as `x-owner-token`. The
+  //    browser does the /auth/session handshake itself; the proxy just forwards the Bearer.
+  const ownerToken = req.headers.get("x-owner-token");
+  if (ownerToken) {
+    return `Bearer ${ownerToken}`;
   }
 
   // 2) A pre-supplied static token (e.g. server-to-server).
@@ -78,6 +31,11 @@ async function resolveAuthHeader(req: Request): Promise<string | null> {
   // 3) Dev/CI fallback: mint a dev token. Gated to dev by the API (ALLOW_DEV_TOKEN + non-default
   //    secret); disable in prod by setting NETRUNNERS_DISABLE_DEV_TOKEN.
   if (process.env.NETRUNNERS_DISABLE_DEV_TOKEN === "true") {
+    return null;
+  }
+  const method = req.method.toUpperCase();
+  const readOnlyFallback = method === "GET" || method === "HEAD" || method === "OPTIONS";
+  if (!readOnlyFallback) {
     return null;
   }
   if (cachedDevToken && cachedDevToken.expiresAt > Date.now()) {
@@ -117,6 +75,9 @@ function buildTargetUrl(pathParts: string[], req: Request): URL {
 }
 
 async function proxyToNetrunners(req: Request, pathParts: string[]): Promise<Response> {
+  if (pathParts.join("/") === "auth/dev-token") {
+    return Response.json({ error: "NOT_FOUND" }, { status: 404 });
+  }
   const targetUrl = buildTargetUrl(pathParts, req);
   const upstreamHeaders = new Headers();
 
@@ -133,8 +94,8 @@ async function proxyToNetrunners(req: Request, pathParts: string[]): Promise<Res
       upstreamHeaders.set("authorization", authHeader);
     }
   }
-  // The Privy token is consumed for exchange only — never forwarded upstream.
-  upstreamHeaders.delete("x-privy-token");
+  // The owner token is consumed to build the Authorization header — never forwarded upstream as-is.
+  upstreamHeaders.delete("x-owner-token");
 
   const method = req.method.toUpperCase();
   const canHaveBody = method !== "GET" && method !== "HEAD";

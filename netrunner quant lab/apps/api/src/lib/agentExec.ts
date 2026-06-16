@@ -69,6 +69,55 @@ async function getOrCreateWallet(ownerId: number, provider: JsonRpcProvider): Pr
   return new Wallet(pk, provider);
 }
 
+// Owner's agent-wallet address + raw key (no provider, no gas funding) — used to sign GMX-live orders
+// on Arbitrum One with the SAME per-user wallet the rest of the app uses (one account to fund).
+export async function agentWalletKey(ownerId: number): Promise<{ address: string; privateKey: string }> {
+  const row = await db.query("SELECT address, enc_privkey FROM agent_wallets WHERE owner_id=$1", [ownerId]);
+  if (row.rowCount) return { address: row.rows[0].address as string, privateKey: decPk(row.rows[0].enc_privkey as string) };
+  const w = Wallet.createRandom();
+  await db.query("INSERT INTO agent_wallets (owner_id, address, enc_privkey) VALUES ($1,$2,$3) ON CONFLICT (owner_id) DO NOTHING", [ownerId, w.address, encPk(w.privateKey)]);
+  const r2 = await db.query("SELECT address, enc_privkey FROM agent_wallets WHERE owner_id=$1", [ownerId]);
+  return { address: r2.rows[0].address as string, privateKey: decPk(r2.rows[0].enc_privkey as string) };
+}
+
+// --- Named agent delegate accounts (orchestrator + specialists) for A2A redelegation ----------
+// Each (owner, role) is a backend-held signer keypair whose ADDRESS is the EIP-7710 `delegate`.
+// Stored in agent_accounts (separate from agent_wallets, which stays the proven GMX/stock signer).
+// Security is the scoped delegation + caveats, not key secrecy — see migration 0033.
+// A2A multi-tier was dropped — a single backend agent account is the session/redelegator that
+// receives the user's delegation and redelegates to the 1Shot relayer.
+export type AgentRole = "agent";
+export const AGENT_ROLES: AgentRole[] = ["agent"];
+
+/** Get (or lazily create) the agent delegate account for an owner+role. Returns its address; the
+ *  private key never leaves the backend. Reuses the same AES-256-GCM scheme as agent_wallets. */
+export async function getOrCreateAgentAccount(ownerId: number, role: AgentRole): Promise<{ address: string }> {
+  const row = await db.query("SELECT address FROM agent_accounts WHERE owner_id=$1 AND role=$2", [ownerId, role]);
+  if (row.rowCount) return { address: row.rows[0].address as string };
+  const w = Wallet.createRandom();
+  await db.query(
+    "INSERT INTO agent_accounts (owner_id, role, address, enc_privkey) VALUES ($1,$2,$3,$4) ON CONFLICT (owner_id, role) DO NOTHING",
+    [ownerId, role, w.address, encPk(w.privateKey)],
+  );
+  const r2 = await db.query("SELECT address FROM agent_accounts WHERE owner_id=$1 AND role=$2", [ownerId, role]);
+  return { address: r2.rows[0].address as string };
+}
+
+/** The owner's full set of agent delegate addresses, creating any that don't yet exist. */
+export async function listAgentAccounts(ownerId: number): Promise<Record<AgentRole, string>> {
+  const out = {} as Record<AgentRole, string>;
+  for (const role of AGENT_ROLES) out[role] = (await getOrCreateAgentAccount(ownerId, role)).address;
+  return out;
+}
+
+/** Address + decrypted key for an agent account — backend signing only (orchestrator redelegation,
+ *  specialist redemption in W5). Never exposed over the API. */
+export async function agentAccountKey(ownerId: number, role: AgentRole): Promise<{ address: string; privateKey: string }> {
+  await getOrCreateAgentAccount(ownerId, role);
+  const row = await db.query("SELECT address, enc_privkey FROM agent_accounts WHERE owner_id=$1 AND role=$2", [ownerId, role]);
+  return { address: row.rows[0].address as string, privateKey: decPk(row.rows[0].enc_privkey as string) };
+}
+
 function stockTokenMap(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const pair of (process.env.DUALITY_STOCK_TOKENS ?? "").split(",")) {
@@ -166,6 +215,20 @@ export interface StockMarketState {
 
 function priceToUsd(price: bigint): string {
   return (Number(price) / 1e8).toFixed(2);
+}
+
+/** Lightweight single-symbol oracle read for the order engine (price in 1e8 + freshness). */
+export async function stockOraclePrice(symbol: string): Promise<{ price1e8: bigint; fresh: boolean } | null> {
+  const vaultAddr = process.env.DUALITY_STOCK_VAULT_ADDRESS;
+  if (!vaultAddr) return null;
+  const sym = symbol.trim().toUpperCase().replace(/^D(?=[A-Z]{2,6}$)/, "");
+  try {
+    const vault = new Contract(vaultAddr, VAULT_ABI, rhProvider());
+    const [p, , fresh] = (await vault.priceOf(sym)) as [bigint, bigint, boolean];
+    return { price1e8: p, fresh };
+  } catch {
+    return null;
+  }
 }
 
 function weiValueAtPrice(amountWei: bigint, priceUsd1e8: bigint): bigint {
@@ -753,15 +816,28 @@ export async function testnetLaunchPreflight(ownerId: number, input: LaunchPlanI
 
 export async function buildTestnetLaunchPlan(ownerId: number, input: LaunchPlanInput): Promise<TestnetLaunchPlan> {
   const preflight = await testnetLaunchPreflight(ownerId, input);
+  // Precise cross-chain funding: each sleeve needs collateral on its OWN chain (stocks → MockUSDG on
+  // Robinhood Chain; crypto + LP → dUSDC on Arbitrum Sepolia). Compute the per-chain deficit/surplus and
+  // bridge the EXACT shortfall from whichever chain holds the funds — as the first execution step(s).
+  const round2 = (n: number) => Number(n.toFixed(2));
   const rhNeed = preflight.required.robinhoodUsd;
   const arbNeed = preflight.required.arbitrumUsd;
   const rhHave = Number(preflight.balances.robinhood.mockUsdG ?? 0);
   const arbHave = Number(preflight.balances.arbitrumSepolia.dUSDC ?? 0);
+  const rhDeficit = Math.max(0, rhNeed - rhHave), arbDeficit = Math.max(0, arbNeed - arbHave);
+  const rhSurplus = Math.max(0, rhHave - rhNeed), arbSurplus = Math.max(0, arbHave - arbNeed);
   const actions: LaunchAction[] = [];
-  if (rhNeed > rhHave && arbHave > arbNeed) {
-    actions.push({ id: "bridge-arb-rh", kind: "bridge", from: "arbitrum_sepolia", to: "robinhood_testnet", usd: Number((rhNeed - rhHave).toFixed(2)), reason: "Stock sleeve needs more Robinhood-chain MockUSDG than the agent currently holds.", endpoint: "/api/exec/bridge" });
-  } else if (arbNeed > arbHave && rhHave > rhNeed) {
-    actions.push({ id: "bridge-rh-arb", kind: "bridge", from: "robinhood_testnet", to: "arbitrum_sepolia", usd: Number((arbNeed - arbHave).toFixed(2)), reason: "Arbitrum sleeve needs more dUSDC than the agent currently holds.", endpoint: "/api/exec/bridge" });
+  if (arbDeficit > 0 && rhSurplus > 0) {
+    const amt = round2(Math.min(arbDeficit, rhSurplus));
+    actions.push({ id: "bridge-rh-arb", kind: "bridge", from: "robinhood_testnet", to: "arbitrum_sepolia", usd: amt,
+      reason: `Arbitrum sleeve needs $${arbNeed.toFixed(2)} dUSDC but the agent holds $${arbHave.toFixed(2)}; bridging $${amt.toFixed(2)} from the Robinhood-chain balance ($${rhHave.toFixed(2)}).`,
+      endpoint: "/api/exec/bridge" });
+  }
+  if (rhDeficit > 0 && arbSurplus > 0) {
+    const amt = round2(Math.min(rhDeficit, arbSurplus));
+    actions.push({ id: "bridge-arb-rh", kind: "bridge", from: "arbitrum_sepolia", to: "robinhood_testnet", usd: amt,
+      reason: `Stock sleeve needs $${rhNeed.toFixed(2)} MockUSDG but the agent holds $${rhHave.toFixed(2)}; bridging $${amt.toFixed(2)} from the Arbitrum-Sepolia balance ($${arbHave.toFixed(2)}).`,
+      endpoint: "/api/exec/bridge" });
   }
   for (const leg of preflight.legs) {
     if (leg.usd <= 0) continue;

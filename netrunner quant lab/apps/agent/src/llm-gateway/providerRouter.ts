@@ -34,6 +34,8 @@ export async function execute(args: ProviderCallArgs): Promise<ProviderResponse>
       return executeOpenAI(args);
     case "anthropic":
       return executeAnthropic(args);
+    case "venice":
+      return executeVenice(args);
     default:
       throw new GatewayError("PROVIDER_NOT_SUPPORTED", `no adapter for provider '${args.provider}'`, 400);
   }
@@ -110,6 +112,65 @@ async function executeOpenAI(args: ProviderCallArgs): Promise<ProviderResponse> 
   if (!resp.ok) {
     const body = await resp.text().catch(() => "");
     throw new GatewayError("PROVIDER_ERROR", `openai ${resp.status}: ${body.slice(0, 200)}`, 502);
+  }
+  const json = (await resp.json()) as any;
+  const choice = json.choices?.[0]?.message ?? {};
+  const u = json.usage ?? {};
+  return {
+    content: typeof choice.content === "string" ? choice.content : "",
+    toolCalls: (choice.tool_calls ?? []).map((tc: any) => ({
+      id: tc.id, name: tc.function?.name, arguments: tc.function?.arguments ?? "{}",
+    })),
+    usage: {
+      input_tokens: Number(u.prompt_tokens ?? 0),
+      cached_input_tokens: Number(u.prompt_tokens_details?.cached_tokens ?? 0),
+      output_tokens: Number(u.completion_tokens ?? 0),
+      reasoning_tokens: Number(u.completion_tokens_details?.reasoning_tokens ?? 0),
+      tool_call_count: (choice.tool_calls ?? []).length,
+      provider_request_id: json.id,
+      latency_ms: Date.now() - started,
+    },
+  };
+}
+
+// --- Venice (OpenAI-compatible chat completions) ---------------------------------------------
+// Venice exposes an OpenAI-compatible surface (tools[] in, tool_calls out), so this mirrors
+// executeOpenAI. Two differences: (1) veniceBaseUrl ALREADY ends in /api/v1, so we call
+// `${base}/chat/completions` with no extra /v1; (2) Venice accepts the classic `max_tokens`. Only
+// models whose /models capabilities report supportsFunctionCalling=true will honor `tools`.
+async function executeVenice(args: ProviderCallArgs): Promise<ProviderResponse> {
+  if (!config.veniceApiKey) throw new GatewayError("PROVIDER_NOT_CONFIGURED", "VENICE_API_KEY not set", 503);
+  const base = config.veniceBaseUrl;
+  const started = Date.now();
+  let resp: Response;
+  try {
+    resp = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.veniceApiKey}` },
+      body: JSON.stringify({
+        model: args.model,
+        messages: args.messages.map((m) => {
+          if (m.role === "assistant" && m.tool_calls?.length) {
+            return { role: "assistant", content: m.content || null, tool_calls: m.tool_calls.map((t) => ({ id: t.id, type: "function", function: { name: t.name, arguments: t.arguments } })) };
+          }
+          if (m.role === "tool") return { role: "tool", tool_call_id: m.tool_call_id, content: m.content };
+          return { role: m.role, content: m.content, name: m.name };
+        }),
+        max_tokens: args.maxTokens,
+        // The Copilot supplies its own system prompt; suppress Venice's default injected prompt so we
+        // don't pay for ~1.6k tokens of unused preamble on every call.
+        venice_parameters: { include_venice_system_prompt: false },
+        ...(args.tools?.length
+          ? { tools: args.tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters ?? {} } })) }
+          : {}),
+      }),
+    });
+  } catch (e) {
+    throw new ProviderTimeoutError((e as Error).message);
+  }
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "");
+    throw new GatewayError("PROVIDER_ERROR", `venice ${resp.status}: ${body.slice(0, 200)}`, 502);
   }
   const json = (await resp.json()) as any;
   const choice = json.choices?.[0]?.message ?? {};

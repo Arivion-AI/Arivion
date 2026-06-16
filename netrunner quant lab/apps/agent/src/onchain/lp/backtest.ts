@@ -7,6 +7,13 @@ import { realizedVol, sharpeLike, maxDrawdown } from "../../analysis/indicators.
 // tick-level liquidity-share math (L1b). Conservative-but-honest.
 const MAX_FEE_CONCENTRATION = 8;
 
+// Spot/realized fee APR for tiny or illiquid pools routinely reads in the thousands of % — that is
+// short-window noise (a burst of volume over a near-empty pool), NOT a yield sustainable over a
+// multi-month LP hold, and it would be crushed by your own capital's dilution the moment you size in.
+// Projecting it linearly (e.g. 31996% APR → +15807% over 180d) fabricates fantasy returns. Cap the APR
+// used by the sim to a realistic ceiling and flag when clamped, so the backtest stays honest.
+const MAX_SUSTAINABLE_FEE_APR_PCT = 100;
+
 // LP BACKTESTER — historical-replay simulation of a concentrated-liquidity position (the lp_backtest
 // widget). HONEST by construction: this is a SIM, not a verified execution. It models, day by day:
 //   • the LP mark (token amounts re-valued along the v3 curve → captures impermanent loss directly),
@@ -55,7 +62,11 @@ export function backtestLp(input: LpBacktestInput): LpBacktestResult {
 
   const volDaily = realizedVol(closes) ?? 0.03;
   const band = suggestBand(volDaily, input.horizonDays ?? 30, input.targetTimeInRange ?? 0.8);
-  const dailyFeeRate = input.grossFeeAprPct / 100 / 365;
+  // Clamp the pool's gross fee APR to a sustainable ceiling before projecting it — see note above.
+  const rawFeeAprPct = Math.max(0, input.grossFeeAprPct);
+  const grossFeeAprPct = Math.min(rawFeeAprPct, MAX_SUSTAINABLE_FEE_APR_PCT);
+  const feeAprClamped = rawFeeAprPct > MAX_SUSTAINABLE_FEE_APR_PCT;
+  const dailyFeeRate = grossFeeAprPct / 100 / 365;
 
   // Re-center state. The band is multiplicative bounds [center*lower, center*upper]; L is fixed within
   // a centering. We track the LP value in QUOTE units, normalized to start at 1.
@@ -75,17 +86,33 @@ export function backtestLp(input: LpBacktestInput): LpBacktestResult {
   // • L1 fallback: bound the concentration premium to a realistic ceiling and apply a saturating
   //   dilution factor against the active-range liquidity. Marked an estimate.
   const trueFee = input.poolDepth && input.tvlUsd
-    ? concentratedFeeMultiplier(input.poolDepth, positionUsd, band.lower, band.upper, input.grossFeeAprPct, input.tvlUsd)
+    ? concentratedFeeMultiplier(input.poolDepth, positionUsd, band.lower, band.upper, grossFeeAprPct, input.tvlUsd)
     : null;
   let feeMult: number, dilution: number, feeModel: string;
   if (trueFee) {
     feeMult = trueFee.feeMultiplier; dilution = 1; feeModel = "tick_liquidity_share";
   } else {
-    feeMult = Math.min(eff, MAX_FEE_CONCENTRATION);
+    // DILUTION (fee-share): you compete with the pool's in-range liquidity. Use active-range liquidity
+    // when known, else fall back to full TVL as the competing-liquidity proxy. Larger position vs pool
+    // ⇒ you own more of an ever-shrinking-per-unit fee stream ⇒ heavier dilution.
+    const liqProxy = (input.activeLiquidityUsd && input.activeLiquidityUsd > 0)
+      ? input.activeLiquidityUsd
+      : (input.tvlUsd && input.tvlUsd > 0 ? input.tvlUsd : 0);
+    // With NO liquidity data we cannot justify a concentration premium (we can't model the dilution that
+    // would eat it), so claim only the blended pool APR (1×). With data, use the bounded premium.
+    feeMult = liqProxy > 0 ? Math.min(eff, MAX_FEE_CONCENTRATION) : 1;
     const effValue = positionUsd * feeMult;
-    dilution = input.activeLiquidityUsd && input.activeLiquidityUsd > 0 ? input.activeLiquidityUsd / (input.activeLiquidityUsd + effValue) : 1;
-    feeModel = "bounded_estimate";
+    dilution = liqProxy > 0 ? liqProxy / (liqProxy + effValue) : 1;
+    feeModel = liqProxy > 0 ? "bounded_estimate" : "bounded_estimate_no_liquidity";
   }
+  // HARD ECONOMIC CEILING (always holds, no liquidity data needed): your position cannot earn more in
+  // fees than the ENTIRE pool generates in a year (grossApr × TVL). So your effective fee APR is capped
+  // at grossApr × TVL / positionUsd — i.e. the combined (concentration × dilution) factor ≤ TVL/position.
+  // This is what actually collapses a tiny illiquid pool's fantasy spot APR to a realistic yield.
+  const feeShareCeil = input.tvlUsd && input.tvlUsd > 0 ? input.tvlUsd / positionUsd : Infinity;
+  let feeFactor = feeMult * dilution;
+  const feeFactorCapped = feeFactor > feeShareCeil;
+  if (feeFactorCapped) feeFactor = feeShareCeil;
 
   let fees = 0, gasPaid = 0, rebalances = 0, inRangeBars = 0;
   const equity: number[] = [];
@@ -97,7 +124,7 @@ export function backtestLp(input: LpBacktestInput): LpBacktestResult {
     const inRange = P >= pa && P <= pb;
     if (inRange) {
       inRangeBars++;
-      fees += depositValue * dailyFeeRate * feeMult * dilution; // bounded concentration × pool-share dilution
+      fees += depositValue * dailyFeeRate * feeFactor; // concentration × dilution, capped at pool-output ceiling
     } else {
       // Price left the band → re-center around current price, pay gas, reset L to keep capital constant.
       const a = amountsForLiquidity(P, pa, pb, L);
@@ -148,10 +175,12 @@ export function backtestLp(input: LpBacktestInput): LpBacktestResult {
       can_execute_real_money: false,
       fee_model: feeModel,
       fee_concentration_mult: Number(feeMult.toFixed(2)) + (!trueFee && eff > MAX_FEE_CONCENTRATION ? ` (capped from ${eff.toFixed(0)}×)` : "×"),
-      fee_share: trueFee ? Number(trueFee.share.toFixed(6)) : (input.activeLiquidityUsd && input.activeLiquidityUsd > 0 ? `dilution ${dilution.toFixed(3)}` : "n/a"),
+      fee_share: trueFee ? Number(trueFee.share.toFixed(6)) : (dilution < 1 ? `dilution ${dilution.toFixed(3)}` : "n/a"),
+      ...(feeFactorCapped ? { fee_share_ceiling: `fees capped at pool's total output: your APR ≤ grossApr × TVL($${Math.round(input.tvlUsd ?? 0).toLocaleString()}) / position($${positionUsd}) — you cannot earn more than the whole pool generates` } : {}),
       assumptions: `band ±${(((band.upper - 1) - (band.lower - 1)) / 2 * 100).toFixed(1)}%, gas $${gasPerRebalance}/rebalance, position $${positionUsd}${input.activeLiquidityUsd ? `, active-liq $${Math.round(input.activeLiquidityUsd).toLocaleString()}` : ""}`,
+      ...(feeAprClamped ? { fee_apr_clamp: `pool reported ${rawFeeAprPct.toFixed(0)}% gross fee APR (unsustainable spot noise); clamped to ${MAX_SUSTAINABLE_FEE_APR_PCT}% for an honest projection` } : {}),
     },
-    rationale: `LP sim over ${closes.length}d: ${totalReturn >= 0 ? "+" : ""}${(totalReturn * 100).toFixed(1)}% · fee APR ~${feeAprRealized.toFixed(1)}% · IL drag ${ilDrag.toFixed(1)}% · ${(tir * 100).toFixed(0)}% in-range · ${rebalances} rebalances.`,
+    rationale: `LP sim over ${closes.length}d: ${totalReturn >= 0 ? "+" : ""}${(totalReturn * 100).toFixed(1)}% · fee APR ~${feeAprRealized.toFixed(1)}% · IL drag ${ilDrag.toFixed(1)}% · ${(tir * 100).toFixed(0)}% in-range · ${rebalances} rebalances.${feeFactorCapped ? ` [fees bounded by pool size — your $${positionUsd} vs $${Math.round(input.tvlUsd ?? 0).toLocaleString()} TVL caps realistic yield]` : feeAprClamped ? ` [pool spot APR ${rawFeeAprPct.toFixed(0)}% clamped to ${MAX_SUSTAINABLE_FEE_APR_PCT}% — illiquid-pool noise]` : ""}`,
   };
 }
 

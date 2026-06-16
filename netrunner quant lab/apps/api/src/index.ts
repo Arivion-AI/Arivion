@@ -4,7 +4,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
-import { authMiddleware, issueDevToken, issueOwnerToken, requireOwnerId, verifyPrivyToken, PrivyVerificationError } from "./lib/auth.js";
+import { authMiddleware, issueDevToken, issueOwnerToken, requireOwnerId, verifySiwe, makeSiweNonce, SiweVerificationError } from "./lib/auth.js";
 import { bootstrapBackfillWorker, enqueueBackfillJob, enqueueDueSchedules, queueStats, upsertSchedule } from "./lib/backfillQueue.js";
 import { db, withTransaction } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
@@ -12,6 +12,13 @@ import { scanCoverage } from "./lib/gapScanner.js";
 import { apiRequestCounter, passportVerificationCounter, registry, runHashMismatchCounter, runTierCounter } from "./lib/metrics.js";
 import { normalizeTierLabel, rankScoreForTier, VERIFIED_TIERS } from "./lib/tiering.js";
 import { createChainsRouter } from "./routes/chains.js";
+import { createDelegationsRouter } from "./routes/delegations.js";
+import { createRelayRouter } from "./routes/relay.js";
+import { createLpExecRouter } from "./routes/lpExec.js";
+import { createExecPlanRouter } from "./routes/execPlan.js";
+import { createCrossChainRouter } from "./routes/crosschain.js";
+import { createStockOrdersRouter } from "./routes/stockOrders.js";
+import { startStockOrderEngine } from "./lib/stockOrderEngine.js";
 import { createDexRouter } from "./routes/dex.js";
 import { createGmxRouter } from "./routes/gmx.js";
 import { createWalletsRouter } from "./routes/wallets.js";
@@ -670,9 +677,23 @@ app.get("/auth/dev-token", async (req, res) => {
   return res.json({ token, ownerId });
 });
 
-// P1.1 — Privy edge → internal owner JWT (variant A token-exchange). Public route: it verifies the
-// Privy ES256 token itself; the internal HS256 owner token it returns is what every other route
-// (and authMiddleware) consumes — unchanged.
+// SIWE step 1 — issue a single-use nonce. Public route (precedes sign-in). The client embeds this
+// nonce in the EIP-4361 message it asks MetaMask to sign; /auth/session consumes it exactly once.
+app.get("/auth/nonce", async (_req, res) => {
+  const nonce = makeSiweNonce();
+  try {
+    await redis.set(`auth:siwe:nonce:${nonce}`, "1", "EX", 300); // 5-min TTL
+  } catch {
+    return res.status(503).json({ error: "NONCE_STORE_UNAVAILABLE" });
+  }
+  return res.json({ nonce });
+});
+
+// SIWE step 2 — MetaMask edge → internal owner JWT (variant A token-exchange). Public route: it
+// verifies the EIP-4361 message + personal_sign signature itself; the internal HS256 owner token it
+// returns is what every other route (and authMiddleware) consumes — UNCHANGED. The wallet maps to
+// the same identity key (`siwe:{address}` in users.privy_did) so the upsert/owner-JWT/revocation
+// machinery is reused byte-for-byte.
 app.post("/auth/session", async (req, res) => {
   // Lightweight Redis token-bucket rate limit (this does a DB upsert + token mint per call).
   try {
@@ -686,34 +707,40 @@ app.post("/auth/session", async (req, res) => {
     /* Redis down: skip rate-limit rather than block logins. */
   }
 
-  const token = typeof req.body?.privyToken === "string" ? req.body.privyToken
-    : (typeof req.body?.accessToken === "string" ? req.body.accessToken : "");
-  if (!token) return res.status(400).json({ error: "MISSING_PRIVY_TOKEN" });
+  const message = typeof req.body?.message === "string" ? req.body.message : "";
+  const signature = typeof req.body?.signature === "string" ? req.body.signature : "";
+  if (!message || !signature) return res.status(400).json({ error: "MISSING_SIWE_PAYLOAD" });
 
   let identity;
   try {
-    identity = await verifyPrivyToken(token);
+    identity = verifySiwe(message, signature);
   } catch (error) {
-    const e = error as PrivyVerificationError;
-    const code = e.code ?? "PRIVY_TOKEN_INVALID";
-    const httpStatus = code === "PRIVY_NOT_CONFIGURED" ? 500 : 401;
-    return res.status(httpStatus).json({ error: code });
+    const code = (error as SiweVerificationError).code ?? "SIWE_TOKEN_INVALID";
+    return res.status(401).json({ error: code });
+  }
+
+  // Consume the nonce exactly once (replay protection). DEL returns 1 only if it existed.
+  try {
+    const consumed = await redis.del(`auth:siwe:nonce:${identity.nonce}`);
+    if (consumed !== 1) return res.status(401).json({ error: "SIWE_NONCE_INVALID" });
+  } catch {
+    return res.status(503).json({ error: "NONCE_STORE_UNAVAILABLE" });
   }
 
   // First login auto-provisions; subsequent logins update profile + last_login_at. Identity key is
-  // privy_did, NOT email (wallet-only logins have none). tier/status keep their server defaults.
+  // privy_did (now `siwe:{address}`); SIWE logins are wallet-only (no email). tier/status keep
+  // their server defaults.
   const upsert = await db.query<{ id: string; tier: string; status: string; email: string | null; display_name: string | null; primary_wallet: string | null }>(
     `
       INSERT INTO users (privy_did, email, primary_wallet, last_login_at)
       VALUES ($1, $2, $3, NOW())
       ON CONFLICT (privy_did)
       DO UPDATE SET
-        email = COALESCE(EXCLUDED.email, users.email),
         primary_wallet = COALESCE(EXCLUDED.primary_wallet, users.primary_wallet),
         last_login_at = NOW()
       RETURNING id, tier, status, email, display_name, primary_wallet
     `,
-    [identity.did, identity.email ?? null, identity.wallet ?? null]
+    [identity.did, null, identity.wallet]
   );
   const row = upsert.rows[0];
   const ownerId = Number(row.id);
@@ -865,6 +892,12 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use(createChainsRouter());
+app.use(createDelegationsRouter());
+app.use(createRelayRouter());
+app.use(createLpExecRouter());
+app.use(createExecPlanRouter());
+app.use(createCrossChainRouter());
+app.use(createStockOrdersRouter());
 app.use(createGmxRouter());
 app.use(createWalletsRouter(redis));
 app.use(createTestnetIntentsRouter());
@@ -3182,6 +3215,8 @@ async function bootstrap(): Promise<void> {
       console.error("backfill scheduler error", error);
     });
   }, schedulerEveryMs);
+
+  startStockOrderEngine();
 
   app.listen(port, () => {
     // eslint-disable-next-line no-console

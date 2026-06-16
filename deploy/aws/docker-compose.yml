@@ -1,0 +1,204 @@
+services:
+  frontend:
+    build:
+      context: ../../frontend
+      args:
+        NEXT_PUBLIC_PRIVY_APP_ID: ${NEXT_PUBLIC_PRIVY_APP_ID:-REDACTED_PRIVY_APP_ID}
+    expose:
+      - "3000"
+    environment:
+      NETRUNNERS_API_URL: http://api:4000
+      NETRUNNERS_AGENT_URL: http://agent:4500
+      NETRUNNERS_OWNER_ID: "1"
+      COPILOT_DISABLE_DEV_TOKEN: "true"
+    depends_on:
+      api:
+        condition: service_started
+      agent:
+        condition: service_started
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      frontend:
+        condition: service_started
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/api/Dockerfile
+    command: sh -c "pnpm --filter api seed && pnpm --filter api start"
+    env_file:
+      - ../../netrunner quant lab/.env
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      QUANT_WORKER_URL: http://worker:7000
+      DUALITY_VERIFIER_URL: http://verifier:7200
+      DATA_INGESTOR_URL: http://data-ingestor:7100
+      JWT_SECRET: ${JWT_SECRET:-REDACTED_JWT_SECRET}
+      ALLOW_DEV_TOKEN: "true"
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-REDACTED_INTERNAL_SECRET}
+      API_PORT: 4000
+      PRIVY_APP_ID: ${PRIVY_APP_ID:-REDACTED_PRIVY_APP_ID}
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/agent/Dockerfile
+    env_file:
+      - ../../netrunner quant lab/.env
+    environment:
+      AGENT_PORT: "4500"
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      MCP_SERVER_URL: http://mcp:8080
+      NETRUNNERS_API_URL: http://api:4000
+      JWT_SECRET: ${JWT_SECRET:-REDACTED_JWT_SECRET}
+      COPILOT_WELCOME_CREDIT_USD: "2.00"
+      COPILOT_WELCOME_CREDIT_EXPIRES_DAYS: "30"
+      COPILOT_MAX_COST_PER_RUN_USD: "1.00"
+      COPILOT_MAX_COST_PER_STEP_USD: "0.50"
+      COPILOT_MAX_COST_PER_DAY_USD: "5.00"
+      COPILOT_MAX_OUTPUT_TOKENS_PER_STEP: "4096"
+      COPILOT_MAX_MODEL_CONTEXT_TOKENS: "200000"
+      COPILOT_BYOK_ENABLED: "false"
+      COPILOT_KEY_FINGERPRINT_SECRET: ${COPILOT_KEY_FINGERPRINT_SECRET:-REDACTED_COPILOT_KEY_FINGERPRINT_SECRET}
+      COPILOT_ADMIN_OWNER_IDS: "3"
+      OPENAI_API_KEY: ${OPENAI_API:-}
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      mcp:
+        condition: service_started
+    restart: unless-stopped
+
+  mcp:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/mcp/Dockerfile
+    environment:
+      DUALITY_TRANSPORT: http
+      DUALITY_HTTP_PORT: "8080"
+      DUALITY_API_URL: http://api:4000
+      DUALITY_VERIFIER_URL: http://verifier:7200
+      DUALITY_INGESTOR_URL: http://data-ingestor:7100
+      DUALITY_SANDBOX_URL: http://sandbox-runner:7300
+      DUALITY_AUTH_MODE: passthrough
+      DUALITY_DEFAULT_OWNER_ID: "1"
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-REDACTED_INTERNAL_SECRET}
+      DUALITY_ENABLE_INTERNAL: "true"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/worker/Dockerfile
+    env_file:
+      - ../../netrunner quant lab/.env
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-REDACTED_INTERNAL_SECRET}
+      HEAVY_CONCURRENCY: "2"
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  data-ingestor:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/data-ingestor/Dockerfile
+    env_file:
+      - ../../netrunner quant lab/.env
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      REDIS_URL: redis://redis:6379
+      BYBIT_BASE_URL: https://api.bybit.com
+      BYBIT_WS_PUBLIC_LINEAR: wss://stream.bybit.com/v5/public/linear
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  verifier:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/verifier/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:5432/duality
+      VERIFIER_SIGNING_KEY: ${VERIFIER_SIGNING_KEY:-REDACTED_VERIFIER_SIGNING_KEY}
+    depends_on:
+      postgres:
+        condition: service_started
+    restart: unless-stopped
+
+  sandbox-runner:
+    build:
+      context: ../../netrunner quant lab
+      dockerfile: apps/sandbox-runner/Dockerfile
+    environment:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    read_only: true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: duality
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: duality
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  caddydata:
+  caddyconfig:

@@ -9,6 +9,7 @@ import { recordBudgetEvent } from "../budget/index.js";
 import { getRiskState } from "../risk/index.js";
 import { screenTokens, type ScreenEmit } from "../analysis/engine.js";
 import { tryFetchKlines, fetchKlinesPaged, toEngineBars } from "../analysis/klines.js";
+import { getGmxOhlcv } from "../onchain/gmx/client.js";
 import { detectRegimes, aggregateReturns, type RegimeSegment } from "../analysis/regimes.js";
 import { maxDrawdown, realizedVol, sharpeLike } from "../analysis/indicators.js";
 import { buildAndBacktestPlan, defaultBotFor } from "../playbooks/buildAndBacktest.js";
@@ -140,6 +141,31 @@ async function bybitBars(symbol: string, category: string, interval: string, lim
   const cat = category === "linear" ? "linear" : "spot";
   const series = await tryFetchKlines(symbol, cat, interval, limit, window);
   return series.bars.length ? toEngineBars(series) : [];
+}
+
+// GMX is now the primary backtest data source (the Quant Lab moved off Bybit). Returns engine-shaped
+// bars from the GMX OHLCV API; [] if the symbol isn't a GMX market (caller falls back to Bybit).
+async function gmxBars(symbol: string, interval: string, limit: number, window?: { start: number; end: number }): Promise<unknown[]> {
+  try {
+    const series = await getGmxOhlcv(String(symbol).replace(/USDT?$/i, ""), interval, Math.max(60, limit));
+    let bars = (series.bars ?? []).map((b) => ({
+      ts: b.ts < 1e12 ? b.ts * 1000 : b.ts, // normalize seconds → ms to match Bybit engine bars
+      open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0,
+    }));
+    if (window) bars = bars.filter((b) => b.ts >= window.start && b.ts <= window.end);
+    return bars;
+  } catch {
+    return [];
+  }
+}
+
+// Backtest bar loader: GMX first, Bybit (Lab candles → REST) as fallback for non-GMX symbols.
+async function loadBacktestBars(mcp: ToolCaller, symbol: string, category: string, interval: string, limit: number, window?: { start: number; end: number }): Promise<{ bars: unknown[]; source: string }> {
+  const g = await gmxBars(symbol, interval, limit, window);
+  if (g.length) return { bars: g, source: "GMX" };
+  const viaDb = await getBars(mcp, "get_candles", { symbol, category, interval, limit, full: true });
+  if (viaDb.length) return { bars: viaDb, source: "Lab/Bybit (fallback)" };
+  return { bars: await bybitBars(symbol, category, interval, limit, window), source: "Bybit (fallback)" };
 }
 
 function riskGates(risk: RiskAppetite): Record<string, string> {
@@ -580,7 +606,7 @@ async function runRegimeCrossVal(
     const cryptoLegs: Array<Record<string, unknown>> = [];
     for (const leg of legs) {
       if (leg.asset_class !== "crypto") continue;
-      const bars = await bybitBars(String(leg.symbol), "linear", "D", 1000, { start: seg.startMs, end: seg.endMs });
+      const bars = (await loadBacktestBars(mcp, String(leg.symbol), "linear", "D", 1000, { start: seg.startMs, end: seg.endMs })).bars;
       if (bars.length >= 5) cryptoLegs.push({ ...leg, category: "linear", bars });
     }
     if (!cryptoLegs.length) {
@@ -647,8 +673,7 @@ async function evaluateLegsLight(
 ): Promise<{ recent: ScenarioResult; regime: RegimeReport }> {
   const withBars: Array<Record<string, unknown>> = [];
   for (const leg of legs) {
-    let bars = await getBars(mcp, "get_candles", { symbol: leg.symbol, category: leg.category, interval: intervalStr, limit: 1000, full: true });
-    if (!bars.length) bars = await bybitBars(String(leg.symbol), String(leg.category), intervalStr, 1000);
+    const bars = (await loadBacktestBars(mcp, String(leg.symbol), String(leg.category), intervalStr, 1000)).bars;
     withBars.push({ ...leg, bars });
   }
   e({ id: "ma-recent", kind: "backtest", title: "Backtest · recent", state: "running", rationale: "Re-backtesting the improved basket…" });
@@ -676,19 +701,20 @@ export async function runMultiassetProposal(ownerId: number, p: MultiassetParams
   // triggers a backfill from Bybit so the chosen interval is populated before we read it.
   e({ id: "ma-data", kind: "data", title: "Market data", state: "running", rationale: `Provisioning ${legs.length} legs @ ${intervalStr}m…` });
   const recentLegs: Array<Record<string, unknown>> = [];
+  let primarySource = "GMX";
   for (const leg of legs) {
-    await mcp.callTool("ensure_candles", { symbol: leg.symbol, category: leg.category, interval: intervalStr, minBars: 400 }).catch(() => {});
-    let bars = await getBars(mcp, "get_candles", { symbol: leg.symbol, category: leg.category, interval: intervalStr, limit: 1000, full: true });
-    // Lab backfill still in flight (or symbol not yet ingested)? Self-source straight from Bybit so the
-    // scenario runs now instead of reporting NO_BARS.
+    // GMX first; only ensure Lab candles (Bybit backfill) if GMX has no market for this symbol.
+    const r = await loadBacktestBars(mcp, String(leg.symbol), String(leg.category), intervalStr, 1000);
+    let bars = r.bars;
     if (!bars.length) {
-      bars = await bybitBars(String(leg.symbol), String(leg.category), intervalStr, 1000);
-      if (bars.length) warnings.push(`${leg.symbol}: Lab candles not ready — sourced ${bars.length} ${intervalStr} bars from Bybit directly`);
-      else warnings.push(`no recent candles for ${leg.symbol} @ ${intervalStr} (not on the Lab or Bybit yet)`);
+      await mcp.callTool("ensure_candles", { symbol: leg.symbol, category: leg.category, interval: intervalStr, minBars: 400 }).catch(() => {});
+      bars = (await loadBacktestBars(mcp, String(leg.symbol), String(leg.category), intervalStr, 1000)).bars;
     }
+    if (r.source !== "GMX" && bars.length) { primarySource = "GMX + Bybit fallback"; warnings.push(`${leg.symbol}: not a GMX market — used ${r.source} bars`); }
+    else if (!bars.length) warnings.push(`no candles for ${leg.symbol} @ ${intervalStr} (GMX or Bybit)`);
     recentLegs.push({ ...leg, bars });
   }
-  e({ id: "ma-data", kind: "data", title: "Market data", state: "done", rationale: `${legs.length} legs · ${intervalStr}m candles`, data: { legs: recentLegs.map((l) => ({ symbol: l.symbol, bars: Array.isArray(l.bars) ? (l.bars as unknown[]).length : 0, interval: intervalStr, category: l.category, source: "Lab/Bybit" })), interval: intervalStr } });
+  e({ id: "ma-data", kind: "data", title: "Market data", state: "done", rationale: `${legs.length} legs · ${intervalStr}m candles · ${primarySource}`, data: { legs: recentLegs.map((l) => ({ symbol: l.symbol, bars: Array.isArray(l.bars) ? (l.bars as unknown[]).length : 0, interval: intervalStr, category: l.category, source: primarySource })), interval: intervalStr } });
 
   // The editable BASKET — tokens/stocks with allocation (weight) + live price (last candle close). The
   // UI lets the user edit allocations; "Nexa Analyze" re-runs with the new weights.

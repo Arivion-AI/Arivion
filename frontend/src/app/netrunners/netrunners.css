@@ -1334,3 +1334,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============== Advanced orders: candle chart timeframe, order tabs, open orders panel ============== */
+.rh-market-tf { display: flex; gap: 6px; margin-bottom: 8px; }
+.rh-market-tf button { background: rgb(255 255 255 / 4%); border: 1px solid var(--navy-line); color: var(--muted); border-radius: 4px;
+  font: 600 10px var(--font-mono, monospace); letter-spacing: .06em; padding: 4px 10px; cursor: pointer; }
+.rh-market-tf button.on { background: rgb(239 90 35 / 14%); border-color: rgb(239 90 35 / 55%); color: var(--white); }
+.rh-market-chart-empty { display: grid; place-items: center; height: 220px; color: var(--muted); font-size: 12px; }
+
+.rh-ord-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+.rh-ord-tabs button { background: rgb(255 255 255 / 3%); border: 1px solid var(--navy-line); color: var(--muted);
+  border-radius: 4px; padding: 7px 0; font: 700 10px var(--font-display, sans-serif); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.rh-ord-tabs button.on { background: rgb(239 90 35 / 16%); border-color: rgb(239 90 35 / 55%); color: var(--white); }
+.rh-market-field select { width: 100%; background: rgb(0 0 0 / 28%); border: 1px solid var(--navy-line); color: var(--white);
+  border-radius: 4px; padding: 11px 12px; font: inherit; font-size: 13px; }
+.rh-ord-leg { display: grid; grid-template-columns: 1fr 90px 30px; gap: 6px; margin-bottom: 6px; }
+.rh-ord-leg input { background: rgb(0 0 0 / 28%); border: 1px solid var(--navy-line); color: var(--white); border-radius: 4px; padding: 9px 10px; font: inherit; font-size: 13px; }
+.rh-ord-leg button { background: rgb(255 59 83 / 12%); border: 1px solid rgb(255 59 83 / 40%); color: var(--red); border-radius: 4px; cursor: pointer; font-size: 14px; }
+.rh-ord-addleg { width: 100%; background: transparent; border: 1px dashed var(--navy-line); color: var(--muted); border-radius: 4px; padding: 8px; margin-bottom: 8px; cursor: pointer; font-size: 12px; }
+.rh-ord-addleg:hover { border-color: var(--teal); color: var(--teal); }
+.rh-ord-msg { margin-top: 10px; font-size: 11.5px; color: var(--teal); line-height: 1.4; }
+
+.rh-ord-panel { margin-top: 12px; border-top: 1px solid var(--navy-line); padding-top: 12px; }
+.rh-ord-head { font: 700 10px var(--font-display, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.rh-ord-empty { color: var(--muted); font-size: 12px; padding: 6px 0; }
+.rh-ord-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid rgb(255 255 255 / 5%); }
+.rh-ord-item:first-of-type { border-top: 0; }
+.rh-ord-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rh-ord-item-main b { font-size: 12.5px; color: var(--white); text-transform: capitalize; }
+.rh-ord-item-main em { font-style: normal; font-size: 10.5px; color: var(--muted); }
+.rh-ord-by { font: 600 9px var(--font-mono, monospace); padding: 2px 7px; border-radius: 999px; border: 1px solid var(--navy-line); color: var(--muted); }
+.rh-ord-by.copilot { color: var(--teal); border-color: rgb(22 224 176 / 40%); background: rgb(22 224 176 / 8%); }
+.rh-ord-item button { background: rgb(255 255 255 / 5%); border: 1px solid var(--navy-line); color: var(--muted); border-radius: 4px; padding: 5px 9px; font-size: 10.5px; cursor: pointer; }
+.rh-ord-item button:hover { border-color: var(--orange); color: var(--white); }
+.rh-ord-events { margin-top: 10px; border-top: 1px solid rgb(255 255 255 / 5%); padding-top: 8px; }
+.rh-ord-events > span { font: 700 9px var(--font-display, sans-serif); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.rh-ord-event { display: flex; align-items: center; gap: 6px; font-size: 10.5px; padding: 4px 0; color: var(--muted); }
+.rh-ord-event b { text-transform: capitalize; }
+.rh-ord-event b.ok { color: var(--teal); }
+.rh-ord-event b.bad { color: var(--red); }
+.rh-ord-event em { font-style: normal; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rh-ord-event a { color: var(--teal); text-decoration: none; }

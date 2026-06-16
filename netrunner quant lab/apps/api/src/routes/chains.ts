@@ -2,7 +2,7 @@ import express from "express";
 import { chainRegistry, findChain, publicChain, realTraderEnabled } from "../config/chains.js";
 import { db } from "../lib/db.js";
 import { CHAINLINK_FEEDS, readChainlink, readChainlinkMany, readStockFeedMany, readFeed, STOCK_FEED_SYMBOLS } from "../lib/chainlink.js";
-import { executeStockBuy, executeStockSell, executeLp, executeSwap, executeBridge, executionEnabled, agentWalletInfo, stockMarketState, testnetLaunchPreflight, buildTestnetLaunchPlan, executeTestnetLaunchPlan } from "../lib/agentExec.js";
+import { executeStockBuy, executeStockSell, executeLp, executeSwap, executeBridge, executionEnabled, agentWalletInfo, stockMarketState, testnetLaunchPreflight, buildTestnetLaunchPlan, executeTestnetLaunchPlan, listAgentAccounts } from "../lib/agentExec.js";
 import { requireOwnerId } from "../lib/auth.js";
 
 export function createChainsRouter(): express.Router {
@@ -11,6 +11,13 @@ export function createChainsRouter(): express.Router {
   // Agent on-chain execution (TESTNET ONLY). The "launch" step that actually transacts.
   router.get("/api/exec/agent-wallet", async (req, res) => {
     try { res.json({ executionEnabled: executionEnabled(), ...(await agentWalletInfo(requireOwnerId(req))) }); }
+    catch (e) { res.status(500).json({ error: (e as Error).message }); }
+  });
+
+  // A2A delegate accounts: the orchestrator + specialist agent addresses the user delegates to.
+  // Addresses only — private keys never leave the backend. Lazily created on first read.
+  router.get("/api/agents/accounts", async (req, res) => {
+    try { res.json({ accounts: await listAgentAccounts(requireOwnerId(req)) }); }
     catch (e) { res.status(500).json({ error: (e as Error).message }); }
   });
   router.get("/api/exec/stocks", async (req, res) => {

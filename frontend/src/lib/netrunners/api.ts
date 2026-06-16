@@ -1,5 +1,5 @@
 import { NETRUNNERS_PROXY_PREFIX } from "@/lib/netrunners/config";
-import { getFreshPrivyToken } from "@/lib/netrunners/privy-token";
+import { getOwnerToken } from "@/lib/netrunners/session";
 
 async function parseJsonSafe<T>(res: Response): Promise<T | null> {
   try {
@@ -9,20 +9,15 @@ async function parseJsonSafe<T>(res: Response): Promise<T | null> {
   }
 }
 
-// §25 — attach a *fresh* Privy access token (Privy rotates it ~hourly) so the Next proxy can
-// token-exchange it via /auth/session and forward the internal owner token. No-op server-side /
-// pre-login. On a 401 (a stale-token exchange failing at the proxy) we refresh once and retry, so
-// an expired access token recovers transparently without forcing a re-login.
-async function withPrivy(headers: Record<string, string> = {}): Promise<Record<string, string>> {
-  const tok = await getFreshPrivyToken();
-  return tok ? { ...headers, "x-privy-token": tok } : headers;
+// Attach the internal owner JWT (from the MetaMask SIWE sign-in) as `x-owner-token` so the Next
+// proxy forwards it as a Bearer. No-op server-side / pre-login.
+function withOwnerToken(headers: Record<string, string> = {}): Record<string, string> {
+  const tok = getOwnerToken();
+  return tok ? { ...headers, "x-owner-token": tok } : headers;
 }
 
 async function proxyFetch(path: string, init: RequestInit, baseHeaders: Record<string, string> = {}): Promise<Response> {
-  const send = async () =>
-    fetch(`${NETRUNNERS_PROXY_PREFIX}${path}`, { ...init, headers: await withPrivy(baseHeaders), cache: "no-store" });
-  const res = await send();
-  return res.status === 401 ? send() : res;
+  return fetch(`${NETRUNNERS_PROXY_PREFIX}${path}`, { ...init, headers: withOwnerToken(baseHeaders), cache: "no-store" });
 }
 
 export async function netrunnersGet<T>(path: string): Promise<T | null> {
@@ -61,6 +56,15 @@ export async function netrunnersPostResult<T, B = unknown>(
     path,
     { method: "POST", body: JSON.stringify(body) },
     { "Content-Type": "application/json" },
+  );
+  return { ok: res.ok, status: res.status, data: await parseJsonSafe<T>(res) };
+}
+
+export async function netrunnersSend<T>(path: string, method: string, body?: unknown): Promise<{ ok: boolean; status: number; data: T | null }> {
+  const res = await proxyFetch(
+    path,
+    { method, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) },
+    body !== undefined ? { "Content-Type": "application/json" } : {},
   );
   return { ok: res.ok, status: res.status, data: await parseJsonSafe<T>(res) };
 }

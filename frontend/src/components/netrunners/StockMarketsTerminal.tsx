@@ -1,9 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fmtUsd, getStockOhlcvEnsured, netrunnersGetResult, netrunnersPostResult, seriesToPoints, type CandleBar } from "@/lib/netrunners/api";
-import { SparkAreaChart } from "@/components/netrunners/Visuals";
+import { fmtUsd, getStockOhlcvEnsured, netrunnersGetResult, netrunnersPostResult, netrunnersSend, type CandleBar } from "@/lib/netrunners/api";
+import { CandleChart } from "@/components/netrunners/CandleChart";
 import { TokenIcon } from "@/components/netrunners/TokenIcon";
+
+type OrderLeg = { symbol: string; usdg?: number; stock?: number };
+type OrderRow = { id: string; kind: string; side: string; legs: OrderLeg[]; trigger_price_1e8?: string | null; comparator?: string | null; trigger_symbol?: string | null; state: string; created_by: string; fill_tx?: string | null; last_error?: string | null; created_at: string };
+type DcaRow = { id: string; legs: OrderLeg[]; usdg_per_run: string; interval_seconds: string; next_run_at: string; runs_done: number; max_runs?: number | null; state: string; created_by: string; last_tx?: string | null };
+type OrderEventRow = { id: string; order_id?: string | null; bot_id?: string | null; action: string; detail?: string | null; tx?: string | null; ts: string };
+type OrdersResp = { ok: boolean; orders: OrderRow[]; bots: DcaRow[]; events: OrderEventRow[] };
+type OrderActionResp = { ok?: boolean; note?: string; error?: string };
+
+const INTERVAL_OPTIONS: Array<{ label: string; seconds: number }> = [
+  { label: "Hourly", seconds: 3600 },
+  { label: "Daily", seconds: 86400 },
+  { label: "Weekly", seconds: 604800 },
+  { label: "1 min (demo)", seconds: 60 },
+];
+
+function whoBadge(by?: string): string { return by === "copilot" ? "Arivion" : "You"; }
+function legAmt(o: OrderRow): string {
+  if (o.kind === "basket") return `$${o.legs.reduce((s, l) => s + (l.usdg ?? 0), 0)}`;
+  const l = o.legs[0];
+  return l?.usdg != null ? `$${l.usdg}` : l?.stock != null ? `${l.stock} sh` : "";
+}
+function intervalLabel(sec: number): string {
+  const o = INTERVAL_OPTIONS.find((x) => x.seconds === sec);
+  if (o) return o.label;
+  if (sec % 86400 === 0) return `${sec / 86400}d`;
+  if (sec % 3600 === 0) return `${sec / 3600}h`;
+  return `${sec}s`;
+}
 
 type StockRow = {
   symbol: string;
@@ -102,10 +130,6 @@ function actionError(data: TradeResult | null, status: number): string {
   return data?.error || `request failed (${status})`;
 }
 
-function closes(bars: CandleBar[]): number[] {
-  return bars.map((b) => Number(b.close)).filter((v) => Number.isFinite(v) && v > 0);
-}
-
 function stockName(symbol: string): string {
   return STOCK_NAMES[symbol] ?? symbol;
 }
@@ -164,6 +188,27 @@ export function StockMarketsTerminal({
   const [trading, setTrading] = useState(false);
   const [result, setResult] = useState<TradeResult | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Order entry + open orders/bots.
+  const [tab, setTab] = useState<"market" | "limit" | "dca" | "basket">("market");
+  const [timeframe, setTimeframe] = useState<"1M" | "3M" | "1Y" | "ALL">("3M");
+  const [limitPrice, setLimitPrice] = useState("");
+  const [limitUsd, setLimitUsd] = useState("100");
+  const [dcaUsd, setDcaUsd] = useState("25");
+  const [dcaInterval, setDcaInterval] = useState(86400);
+  const [dcaMaxRuns, setDcaMaxRuns] = useState("");
+  const [basketLegs, setBasketLegs] = useState<Array<{ symbol: string; usd: string }>>([{ symbol: "TSLA", usd: "50" }, { symbol: "AMZN", usd: "50" }]);
+  const [orders, setOrders] = useState<OrdersResp | null>(null);
+  const [orderMsg, setOrderMsg] = useState("");
+
+  const loadOrders = useCallback(async () => {
+    const r = await netrunnersGetResult<OrdersResp>("/api/exec/orders");
+    if (r.ok && r.data) setOrders(r.data);
+  }, []);
+  useEffect(() => {
+    void loadOrders();
+    const t = window.setInterval(() => void loadOrders(), 15000);
+    return () => window.clearInterval(t);
+  }, [loadOrders]);
 
   const load = useCallback(async () => {
     setStatus("Reading vault, USDG and stock balances...");
@@ -207,10 +252,48 @@ export function StockMarketsTerminal({
   const portfolioValue = rows.reduce((sum, s) => sum + n(s.valueUsd), 0);
   const estimatedStock = price > 0 ? n(usdAmount) / price : 0;
   const estimatedUsd = price > 0 ? n(stockAmount) * price : 0;
-  const chartValues = closes(bars);
-  const chartPoints = useMemo(() => seriesToPoints(chartValues, 190, 12), [chartValues]);
   const stale = row ? !row.fresh : true;
   const canTrade = !!row && state?.configured && !trading && !stale && n(side === "buy" ? usdAmount : stockAmount) > 0;
+  const tfBars = useMemo(() => {
+    if (timeframe === "ALL") return bars;
+    const days = timeframe === "1M" ? 22 : timeframe === "3M" ? 66 : 252;
+    return bars.slice(-days);
+  }, [bars, timeframe]);
+
+  async function placeLimit() {
+    if (!row) return;
+    setOrderMsg("Placing limit order…");
+    const r = await netrunnersPostResult<OrderActionResp, Record<string, unknown>>("/api/exec/orders", {
+      kind: "limit", side, triggerPrice: Number(limitPrice || price),
+      legs: [side === "buy" ? { symbol: row.symbol, usdg: Number(limitUsd) } : { symbol: row.symbol, stock: Number(stockAmount) }],
+    });
+    setOrderMsg(r.data?.note ?? (r.ok ? "Limit order placed." : r.data?.error ?? "Failed to place order."));
+    await loadOrders();
+  }
+  async function startDca() {
+    if (!row) return;
+    setOrderMsg("Starting DCA bot…");
+    const r = await netrunnersPostResult<OrderActionResp, Record<string, unknown>>("/api/exec/dca", {
+      legs: [{ symbol: row.symbol, usdg: Number(dcaUsd) }], intervalSeconds: dcaInterval,
+      maxRuns: dcaMaxRuns ? Number(dcaMaxRuns) : undefined,
+    });
+    setOrderMsg(r.ok ? `DCA bot started — buys $${dcaUsd} of d${row.symbol} every ${intervalLabel(dcaInterval)}.` : r.data?.error ?? "Failed to start bot.");
+    await loadOrders();
+  }
+  async function placeBasket() {
+    const legs = basketLegs.map((l) => ({ symbol: l.symbol.trim().toUpperCase(), usdg: Number(l.usd) })).filter((l) => l.symbol && l.usdg > 0);
+    if (!legs.length) { setOrderMsg("Add at least one basket leg."); return; }
+    setOrderMsg("Queuing basket…");
+    const r = await netrunnersPostResult<OrderActionResp, Record<string, unknown>>("/api/exec/orders", { kind: "basket", side: "buy", legs });
+    setOrderMsg(r.ok ? "Basket queued — fills on the next engine tick (~30s)." : r.data?.error ?? "Failed to queue basket.");
+    await loadOrders();
+  }
+  async function cancelOrder(id: string) { await netrunnersSend(`/api/exec/orders/${id}`, "DELETE"); await loadOrders(); }
+  async function setBotState(id: string, action: "pause" | "resume" | "stop") {
+    if (action === "stop") await netrunnersSend(`/api/exec/dca/${id}`, "DELETE");
+    else await netrunnersSend(`/api/exec/dca/${id}`, "PATCH", { action });
+    await loadOrders();
+  }
 
   async function executeTrade() {
     if (!row) return;
@@ -279,10 +362,15 @@ export function StockMarketsTerminal({
             </div>
           </div>
           <div className="rh-market-chart">
-            <SparkAreaChart points={chartPoints} height={190} stroke="var(--orange)" />
+            <div className="rh-market-tf">
+              {(["1M", "3M", "1Y", "ALL"] as const).map((tf) => (
+                <button key={tf} className={timeframe === tf ? "on" : ""} onClick={() => setTimeframe(tf)}>{tf}</button>
+              ))}
+            </div>
+            {tfBars.length > 1 ? <CandleChart bars={tfBars} height={variant === "embedded" ? 260 : 340} /> : <div className="rh-market-chart-empty">No candle data</div>}
             <div className="rh-market-chart-meta">
               <span>{chartStatus}</span>
-              <b>{bars.length ? `${new Date((bars[bars.length - 1].ts || 0) * 1000).toISOString().slice(0, 10)} latest candle` : "no candle data"}</b>
+              <b>{bars.length ? `${new Date((bars[bars.length - 1].ts || 0) * 1000).toISOString().slice(0, 10)} latest` : "—"}</b>
             </div>
           </div>
           <div className="rh-market-facts">
@@ -300,41 +388,78 @@ export function StockMarketsTerminal({
             <span>Order ticket</span>
             <button onClick={() => void load()}>Refresh</button>
           </div>
-          <div className="rh-market-toggle">
-            <button className={side === "buy" ? "on" : ""} onClick={() => setSide("buy")}>Buy</button>
-            <button className={side === "sell" ? "on" : ""} onClick={() => setSide("sell")}>Sell</button>
+          <div className="rh-ord-tabs">
+            {(["market", "limit", "dca", "basket"] as const).map((t) => (
+              <button key={t} className={tab === t ? "on" : ""} onClick={() => { setTab(t); if (t === "limit" && !limitPrice && price > 0) setLimitPrice(price.toFixed(2)); }}>{t}</button>
+            ))}
           </div>
-          {side === "buy" ? (
-            <label className="rh-market-field">
-              <span>Spend MockUSDG</span>
-              <input value={usdAmount} inputMode="decimal" onChange={(e) => setUsdAmount(e.target.value)} />
-              <em>Est. receive {estimatedStock.toFixed(6)} d{row.symbol}</em>
-            </label>
-          ) : (
-            <label className="rh-market-field">
-              <span>Sell d{row.symbol}</span>
-              <input value={stockAmount} inputMode="decimal" onChange={(e) => setStockAmount(e.target.value)} />
-              <em>Est. receive {fmtUsd(estimatedUsd)} USDG</em>
-            </label>
-          )}
+          {tab === "market" || tab === "limit" ? (
+            <div className="rh-market-toggle">
+              <button className={side === "buy" ? "on" : ""} onClick={() => setSide("buy")}>Buy</button>
+              <button className={side === "sell" ? "on" : ""} onClick={() => setSide("sell")}>Sell</button>
+            </div>
+          ) : null}
+
+          {tab === "market" ? (
+            <>
+              {side === "buy" ? (
+                <label className="rh-market-field"><span>Spend MockUSDG</span><input value={usdAmount} inputMode="decimal" onChange={(e) => setUsdAmount(e.target.value)} /><em>Est. receive {estimatedStock.toFixed(6)} d{row.symbol}</em></label>
+              ) : (
+                <label className="rh-market-field"><span>Sell d{row.symbol}</span><input value={stockAmount} inputMode="decimal" onChange={(e) => setStockAmount(e.target.value)} /><em>Est. receive {fmtUsd(estimatedUsd)} USDG</em></label>
+              )}
+              <button className="rh-market-exec" disabled={!canTrade} onClick={() => void executeTrade()}>{trading ? "Submitting…" : side === "buy" ? `Buy d${row.symbol}` : `Sell d${row.symbol}`}</button>
+              {stale ? <p className="rh-market-warning">Oracle for {row.symbol} is stale — fills are blocked until the price keeper refreshes.</p> : null}
+              {result ? (
+                <div className={`rh-market-result ${result.ok ? "ok" : "bad"}`}>
+                  <b>{result.ok ? "Executed on testnet" : "Execution failed"}</b>
+                  <span>{result.ok ? (result.stockReceived ? `received ${Number(result.stockReceived).toFixed(6)} d${result.symbol}` : `received ${Number(result.usdgReceived ?? 0).toFixed(2)} USDG`) : result.error}</span>
+                  {result.explorer ? <a href={result.explorer} target="_blank" rel="noreferrer">Open explorer</a> : null}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {tab === "limit" ? (
+            <>
+              <label className="rh-market-field"><span>Trigger price (USD)</span><input value={limitPrice} inputMode="decimal" placeholder={price.toFixed(2)} onChange={(e) => setLimitPrice(e.target.value)} /><em>Fills when oracle {side === "buy" ? "≤" : "≥"} ${Number(limitPrice || price).toFixed(2)}</em></label>
+              {side === "buy" ? (
+                <label className="rh-market-field"><span>Spend MockUSDG</span><input value={limitUsd} inputMode="decimal" onChange={(e) => setLimitUsd(e.target.value)} /></label>
+              ) : (
+                <label className="rh-market-field"><span>Sell d{row.symbol}</span><input value={stockAmount} inputMode="decimal" onChange={(e) => setStockAmount(e.target.value)} /></label>
+              )}
+              <button className="rh-market-exec" disabled={!state?.configured} onClick={() => void placeLimit()}>Place {side} limit</button>
+            </>
+          ) : null}
+
+          {tab === "dca" ? (
+            <>
+              <label className="rh-market-field"><span>Buy each run (MockUSDG)</span><input value={dcaUsd} inputMode="decimal" onChange={(e) => setDcaUsd(e.target.value)} /></label>
+              <label className="rh-market-field"><span>Interval</span><select value={dcaInterval} onChange={(e) => setDcaInterval(Number(e.target.value))}>{INTERVAL_OPTIONS.map((o) => <option key={o.seconds} value={o.seconds}>{o.label}</option>)}</select></label>
+              <label className="rh-market-field"><span>Max runs (blank = unlimited)</span><input value={dcaMaxRuns} inputMode="numeric" onChange={(e) => setDcaMaxRuns(e.target.value)} /></label>
+              <button className="rh-market-exec" disabled={!state?.configured} onClick={() => void startDca()}>Start DCA bot · d{row.symbol}</button>
+            </>
+          ) : null}
+
+          {tab === "basket" ? (
+            <>
+              {basketLegs.map((leg, i) => (
+                <div className="rh-ord-leg" key={i}>
+                  <input className="rh-ord-leg-sym" value={leg.symbol} placeholder="TSLA" onChange={(e) => setBasketLegs((b) => b.map((x, j) => (j === i ? { ...x, symbol: e.target.value } : x)))} />
+                  <input className="rh-ord-leg-usd" value={leg.usd} inputMode="decimal" placeholder="50" onChange={(e) => setBasketLegs((b) => b.map((x, j) => (j === i ? { ...x, usd: e.target.value } : x)))} />
+                  <button onClick={() => setBasketLegs((b) => b.filter((_, j) => j !== i))} aria-label="remove leg">×</button>
+                </div>
+              ))}
+              <button className="rh-ord-addleg" onClick={() => setBasketLegs((b) => [...b, { symbol: "", usd: "25" }])}>+ Add stock</button>
+              <button className="rh-market-exec" disabled={!state?.configured} onClick={() => void placeBasket()}>Buy basket ({basketLegs.length})</button>
+            </>
+          ) : null}
+
           <div className="rh-market-ticket-kv">
             <div><span>USDG balance</span><b>{Number(state?.usdBalance ?? 0).toFixed(2)}</b></div>
             <div><span>d{row.symbol} balance</span><b>{Number(row.balance).toFixed(6)}</b></div>
-            <div><span>Oracle route</span><b>vault priceOf</b></div>
-            <div><span>Slippage</span><b>0.00% model</b></div>
           </div>
-          <button className="rh-market-exec" disabled={!canTrade} onClick={() => void executeTrade()}>
-            {trading ? "Submitting..." : side === "buy" ? `Buy d${row.symbol}` : `Sell d${row.symbol}`}
-          </button>
           <button className="rh-market-copilot" disabled={!onCopilot} onClick={askCopilot}>Send this market to Copilot</button>
-          {stale ? <p className="rh-market-warning">Trading is blocked because the vault oracle for {row.symbol} is stale. Run the stock price keeper before execution.</p> : null}
-          {result ? (
-            <div className={`rh-market-result ${result.ok ? "ok" : "bad"}`}>
-              <b>{result.ok ? "Executed on testnet" : "Execution failed"}</b>
-              <span>{result.ok ? `${result.stockReceived ? `received ${Number(result.stockReceived).toFixed(6)} d${result.symbol}` : `received ${Number(result.usdgReceived ?? 0).toFixed(2)} USDG`}` : result.error}</span>
-              {result.explorer ? <a href={result.explorer} target="_blank" rel="noreferrer">Open explorer</a> : null}
-            </div>
-          ) : null}
+          {orderMsg ? <p className="rh-ord-msg">{orderMsg}</p> : null}
         </div>
 
         <div className="rh-market-portfolio">
@@ -351,7 +476,46 @@ export function StockMarketsTerminal({
               </div>
             ))}
           </div>
-          <p>Current implementation is spot only: mint to buy and redeem to sell. Later phases can add limit orders, baskets, DCA bots and guarded copilot execution on top of the same contract state.</p>
+          <div className="rh-ord-panel">
+            <div className="rh-ord-head"><span>Open orders &amp; bots</span></div>
+            {(orders?.orders ?? []).filter((o) => o.state === "pending" || o.state === "filling").length === 0 &&
+             (orders?.bots ?? []).filter((b) => b.state === "active" || b.state === "paused").length === 0 ? (
+              <div className="rh-ord-empty">No open orders or bots — use the Limit, DCA or Basket tabs.</div>
+            ) : null}
+            {(orders?.orders ?? []).filter((o) => o.state === "pending" || o.state === "filling").map((o) => (
+              <div className="rh-ord-item" key={o.id}>
+                <div className="rh-ord-item-main">
+                  <b>{o.kind === "basket" ? `Basket · ${o.legs.length} legs` : `${o.side} limit · ${o.legs[0]?.symbol ?? ""}`}</b>
+                  <em>{o.trigger_price_1e8 != null ? `${o.comparator === "gte" ? "≥" : "≤"} $${(Number(o.trigger_price_1e8) / 1e8).toFixed(2)}` : "fills next tick"} · {legAmt(o)}</em>
+                </div>
+                <span className={`rh-ord-by ${o.created_by}`}>{whoBadge(o.created_by)}</span>
+                <button onClick={() => void cancelOrder(o.id)}>Cancel</button>
+              </div>
+            ))}
+            {(orders?.bots ?? []).filter((b) => b.state === "active" || b.state === "paused").map((b) => (
+              <div className="rh-ord-item" key={b.id}>
+                <div className="rh-ord-item-main">
+                  <b>DCA · {b.legs.map((l) => l.symbol).join("+")}</b>
+                  <em>${Number(b.usdg_per_run).toFixed(0)} / {intervalLabel(Number(b.interval_seconds))} · {b.runs_done}{b.max_runs ? `/${b.max_runs}` : ""} runs · {b.state}</em>
+                </div>
+                <span className={`rh-ord-by ${b.created_by}`}>{whoBadge(b.created_by)}</span>
+                <button onClick={() => void setBotState(b.id, b.state === "paused" ? "resume" : "pause")}>{b.state === "paused" ? "Resume" : "Pause"}</button>
+                <button onClick={() => void setBotState(b.id, "stop")}>Stop</button>
+              </div>
+            ))}
+            {(orders?.events ?? []).length ? (
+              <div className="rh-ord-events">
+                <span>Recent fills</span>
+                {(orders?.events ?? []).slice(0, 5).map((e) => (
+                  <div className="rh-ord-event" key={e.id}>
+                    <b className={e.action.includes("fail") ? "bad" : "ok"}>{e.action.replace(/_/g, " ")}</b>
+                    <em>{e.detail ?? ""}</em>
+                    {e.tx ? <a href={e.tx} target="_blank" rel="noreferrer">↗</a> : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>

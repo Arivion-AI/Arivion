@@ -1,5 +1,10 @@
 import type { GmxMarket } from "../gmx/client.js";
 
+// Tiny/illiquid pools report unsustainable thousands-of-% spot fee APRs (short-window noise crushed by
+// your own dilution once you size in). Cap the gross APR used in net-yield math to a realistic ceiling
+// so screening doesn't surface fantasy yields. Keep in sync with backtest.MAX_SUSTAINABLE_FEE_APR_PCT.
+const MAX_SUSTAINABLE_FEE_APR_PCT = 100;
+
 // FEE-YIELD + FUNDING-CARRY analyzer (the funding_carry widget). Two jobs:
 //   1. Decompose an LP's net APR: gross fees − modeled IL drag − gas (− borrow if leveraged).
 //   2. Read the venue's funding/borrow carry and flag whether holding a hedge PAYS you or COSTS you,
@@ -25,15 +30,17 @@ export function netYield(opts: {
   gasPerRebalanceUsd: number;
   positionUsd: number;
 }): NetYield {
+  const grossFee = Math.min(Math.max(0, opts.grossFeeAprPct), MAX_SUSTAINABLE_FEE_APR_PCT);
+  const clamped = opts.grossFeeAprPct > MAX_SUSTAINABLE_FEE_APR_PCT;
   const ilDragAnnual = Math.abs(opts.typicalIl) * Math.max(0, opts.rebalancesPerYear) * 100;
   const gasAnnual = opts.positionUsd > 0 ? (opts.gasPerRebalanceUsd * opts.rebalancesPerYear) / opts.positionUsd * 100 : 0;
-  const net = opts.grossFeeAprPct - ilDragAnnual - gasAnnual;
+  const net = grossFee - ilDragAnnual - gasAnnual;
   return {
-    grossFeeAprPct: opts.grossFeeAprPct,
+    grossFeeAprPct: grossFee,
     ilDragAprPct: ilDragAnnual,
     gasAprPct: gasAnnual,
     netAprPct: net,
-    rationale: `Net ≈ ${opts.grossFeeAprPct.toFixed(1)}% fees − ${ilDragAnnual.toFixed(1)}% IL drag − ${gasAnnual.toFixed(2)}% gas = ${net.toFixed(1)}% (at ${(opts.timeInRange * 100).toFixed(0)}% time-in-range, ~${opts.rebalancesPerYear.toFixed(0)} rebalances/yr).`,
+    rationale: `Net ≈ ${grossFee.toFixed(1)}% fees − ${ilDragAnnual.toFixed(1)}% IL drag − ${gasAnnual.toFixed(2)}% gas = ${net.toFixed(1)}% (at ${(opts.timeInRange * 100).toFixed(0)}% time-in-range, ~${opts.rebalancesPerYear.toFixed(0)} rebalances/yr).${clamped ? ` [pool spot APR ${opts.grossFeeAprPct.toFixed(0)}% clamped to ${MAX_SUSTAINABLE_FEE_APR_PCT}% — illiquid-pool noise]` : ""}`,
   };
 }
 
